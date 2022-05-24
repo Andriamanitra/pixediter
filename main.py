@@ -1,4 +1,5 @@
 from colors import Color
+from events import MouseButton, MouseEventType
 import colors
 import borders
 import events
@@ -21,6 +22,32 @@ def draw_box(x0, y0, x1, y1, box_drawing_chars=borders.sharp, color=colors.WHITE
     for y in range(y0 + 1, y1):
         draw(x0, y, UD, color=color)
         draw(x1, y, UD, color=color)
+
+
+def rect(x0: int, y0: int, x1: int, y1: int):
+    """Generates coordinates on the edges of a rectangle"""
+    if y0 > y1:
+        y0, y1 = y1, y0
+    if x0 > x1:
+        x0, x1 = x1, x0
+
+    if x0 == x1:
+        for y in range(y0, y1 + 1):
+            yield (x0, y)
+        return
+
+    if y0 == y1:
+        for x in range(x0, x1 + 1):
+            yield (x, y0)
+        return
+
+    for y in range(y0, y1 + 1):
+        if y == y0 or y == y1:
+            for x in range(x0, x1 + 1):
+                yield (x, y)
+        else:
+            yield (x0, y)
+            yield (x1, y)
 
 
 class TerminalWidget:
@@ -86,13 +113,86 @@ class DrawArea(TerminalWidget):
         super().__init__(parent=parent, bbox=bbox, borders=borders)
         self.image = image
         self.FILLED_PIXEL = "██"
+        self.starting_pos = None
+        self._prev_pos = (-1, -1)
 
     def onclick(self, ev: events.MouseEvent):
         img_x, img_y = self.terminal_coords_to_img_coords(ev.x, ev.y)
-        if ev.button == 0 or ev.button == 32:  # 32 when mouse is moving
-            self.paint(img_x, img_y, self.parent.color)
-        elif ev.button == 1:
-            self.parent.set_color(self.image[img_x, img_y])
+
+        match self.parent.tool, ev.event_type, ev.button:
+            case _, MouseEventType.MOUSE_DOWN, MouseButton.MIDDLE | MouseButton.MIDDLE_DRAG:
+                self.parent.set_primary_color(self.image[img_x, img_y])
+
+            case "Pencil", MouseEventType.MOUSE_DOWN, MouseButton.LEFT | MouseButton.LEFT_DRAG:
+                self.paint(img_x, img_y, self.parent.color)
+
+            case "Pencil", MouseEventType.MOUSE_DOWN, MouseButton.RIGHT | MouseButton.RIGHT_DRAG:
+                self.paint(img_x, img_y, self.parent.secondary_color)
+
+            case "Rectangle", MouseEventType.MOUSE_DOWN, MouseButton.LEFT | MouseButton.RIGHT:
+                self.starting_pos = (img_x, img_y)
+                self._prev_pos = (img_x, img_y)
+
+            case "Rectangle", MouseEventType.MOUSE_DOWN, MouseButton.LEFT_DRAG | MouseButton.RIGHT_DRAG:
+                if self.starting_pos is None:
+                    return False
+
+                drawn = set()
+
+                # draw current
+                color = self.parent.color
+                if ev.button == MouseButton.RIGHT_DRAG:
+                    color = self.parent.secondary_color
+                for xy in rect(*self.starting_pos, img_x, img_y):
+                    self.render_pixel(*xy, color)
+                    drawn.add(xy)
+
+                # clean up previous
+                for xy in rect(*self.starting_pos, *self._prev_pos):
+                    if xy not in drawn:
+                        self.render_pixel(*xy, self.image[xy])
+
+                self._prev_pos = (img_x, img_y)
+
+            case "Rectangle", MouseEventType.MOUSE_UP, MouseButton.LEFT | MouseButton.RIGHT:
+                if self.starting_pos is None:
+                    return False
+                color = self.parent.color
+                if ev.button == MouseButton.RIGHT:
+                    color = self.parent.secondary_color
+                self.image.paint_rectangle(*self.starting_pos, img_x, img_y, color)
+                self.starting_pos = None
+                self.parent.full_redraw()
+
+            case "Fill", MouseEventType.MOUSE_DOWN, MouseButton.LEFT | MouseButton.RIGHT:
+                from_color = self.image[img_x, img_y]
+                to_color = self.parent.color
+                if ev.button == MouseButton.RIGHT:
+                    to_color = self.parent.secondary_color
+                if from_color == to_color:
+                    return True
+                width = self.image.width
+                height = self.image.height
+                stack = [(img_x, img_y)]
+                visited = set()
+                while stack:
+                    x, y = xy = stack.pop()
+                    if self.image[x, y] != from_color:
+                        continue
+                    self.paint(x, y, to_color)
+                    visited.add(xy)
+                    if y > 0 and (x, y - 1) not in visited:
+                        stack.append((x, y - 1))
+                    if x > 0 and (x - 1, y) not in visited:
+                        stack.append((x - 1, y))
+                    if y < height - 1 and (x, y + 1) not in visited:
+                        stack.append((x, y + 1))
+                    if x < width - 1 and (x + 1, y) not in visited:
+                        stack.append((x + 1, y))
+
+            case _:
+                return False
+
         return True
 
     def render(self):
@@ -163,10 +263,20 @@ class Palette(TerminalWidget):
         self.set_colors(colors)
 
     def onclick(self, ev: events.MouseEvent) -> bool:
-        if ev.button == 0 or ev.button == 1:
+        if ev.event_type == MouseEventType.MOUSE_UP:
+            # this allows the default handler to run when the user starts drawing
+            # a shape and then releases mouse above this widget
+            return False
+
+        if ev.button == MouseButton.LEFT or ev.button == MouseButton.MIDDLE:
             color = self._color_from_coord.get((ev.x, ev.y), colors.WHITE)
-            self.parent.set_color(color)
-        return True
+            self.parent.set_primary_color(color)
+            return True
+        elif ev.button == MouseButton.RIGHT:
+            color = self._color_from_coord.get((ev.x, ev.y), colors.WHITE)
+            self.parent.set_secondary_color(color)
+            return True
+        return False
 
     def move(self, dx: int, dy: int):
         super().move(dx, dy)
@@ -231,6 +341,46 @@ class Palette(TerminalWidget):
         return (self.right - self.left + 1) // 2
 
 
+class Toolbox(TerminalWidget):
+    def __init__(self, *, parent, top, left, width=None, borders=None, tools):
+        if width is None:
+            width = max(len(tool) for tool in tools)
+        right = left + width - 1
+        bottom = top + len(tools) - 1
+        bbox = (left, top, right, bottom)
+        super().__init__(parent=parent, bbox=bbox, borders=borders)
+        self.width = width
+        self.tools = tools
+
+    def onclick(self, ev: events.MouseEvent) -> bool:
+        if ev.event_type == MouseEventType.MOUSE_DOWN and ev.button == MouseButton.LEFT:
+            tool_index = ev.y - self.top
+            self.parent.tool = self.tools[tool_index]
+            self.render()
+            return True
+        return False
+
+    def render(self):
+        super().render()
+        y = self.top
+        for tool in self.tools:
+            color = colors.WHITE if tool == self.parent.tool else colors.GRAY
+            toolstr = tool.ljust(self.width)[:self.width]
+            draw(self.left, y, toolstr, color=color)
+            y += 1
+
+    def resize_left(self):
+        if self.right > self.left + 1:
+            self.width -= 1
+            self.right -= 1
+
+    def resize_right(self):
+        self.width += 1
+        self.right += 1
+
+    def resize_up(self): return
+    def resize_down(self): return
+
 class ImageData:
     def __init__(self, width=16, height=16, filepath=None):
         self.width = width
@@ -284,6 +434,18 @@ class ImageData:
         self.width = len(new_pixels[0])
         self.pixels = new_pixels
 
+    def paint_rectangle(self, x0, y0, x1, y1, color):
+        if x0 > x1:
+            x0, x1 = x1, x0
+        if y0 > y1:
+            y0, y1 = y1, y0
+        for x in range(x0, x1 + 1):
+            self.pixels[y0][x] = color
+            self.pixels[y1][x] = color
+        for y in range(y0, y1 + 1):
+            self.pixels[y][x0] = color
+            self.pixels[y][x1] = color
+
     def __iter__(self):
         for row_index, row in enumerate(self.pixels):
             for col_index, pixel in enumerate(row):
@@ -327,10 +489,26 @@ class App:
             colors=Palette.default_colors
         )
         self.color = colors.BLACK
+        self.secondary_color = colors.WHITE
+
+        self.toolbox = Toolbox(
+            parent=self,
+            top=DRAW_AREA_TOP,
+            left=DRAW_AREA_RIGHT + 4,
+            width=10,
+            borders=borders.sharp,
+            tools=[
+                "Pencil",
+                "Rectangle",
+                "Fill",
+            ]
+        )
+        self.tool = "Pencil"
 
         self.widgets = [
             self.draw_area,
             self.palette,
+            self.toolbox
         ]
         for i, widget in enumerate(self.widgets):
             widget.title = str(i)
@@ -392,9 +570,13 @@ class App:
         else:
             self.full_redraw()
 
-    def set_color(self, color):
+    def set_primary_color(self, color):
         self.color = color
-        self.show(f"Color picked: {self.color} – hex: {self.color.hex()}")
+        self.show(f"Primary color: {self.color} – hex: {self.color.hex()}")
+
+    def set_secondary_color(self, color):
+        self.secondary_color = color
+        self.show(f"Secondary color: {self.secondary_color} – hex: {self.secondary_color.hex()}")
 
     def show(self, to_show):
         available_space = self.terminal_columns - self.MARGIN_LEFT
@@ -541,6 +723,10 @@ class App:
         for widget in reversed(self.widgets):
             if widget.contains(ev.x, ev.y) and widget.onclick(ev):
                 return
+        if ev.event_type == MouseEventType.MOUSE_UP and self.draw_area.starting_pos is not None:
+            self.draw_area.starting_pos = None
+            self.full_redraw()
+            return
         self.show(f"got event: {ev!r}")
 
 

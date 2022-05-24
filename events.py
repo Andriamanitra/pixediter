@@ -3,12 +3,29 @@ import tty
 import contextlib
 import termios
 import dataclasses
+import enum
+
+
+class MouseButton(enum.Enum):
+    LEFT = 0
+    MIDDLE = 1
+    RIGHT = 2
+    LEFT_DRAG = 32
+    MIDDLE_DRAG = 33
+    RIGHT_DRAG = 34
+    SCROLL_UP = 64
+    SCROLL_DOWN = 65
+
+
+class MouseEventType(enum.Enum):
+    MOUSE_DOWN = "M"
+    MOUSE_UP = "m"
 
 
 @dataclasses.dataclass
 class MouseEvent:
-    event_type: str
-    button: int
+    event_type: MouseEventType
+    button: MouseButton
     x: int
     y: int
 
@@ -21,16 +38,16 @@ class MouseEvent:
         # 2. y coordinate of the character under cursor
         # 3. x coordinate of the character under cursor
         # the last character is the event type
-        event_types = {
-            "M": "mousedown",
-            "m": "mouseup",
-        }
         try:
             mbutton, x, y = map(int, event_str[3:-1].split(";"))
-            event_type = event_types[event_str[-1]]
+            event_type = MouseEventType(event_str[-1])
+            mbutton = MouseButton(mbutton)
             return cls(event_type, mbutton, x, y)
         except Exception:  # this is stupid but works for now
             return event_str
+
+    def __repr__(self):
+        return f"MouseEvent({self.event_type.name}, {self.button}, x={self.x}, y={self.y})"
 
 
 @contextlib.contextmanager
