@@ -234,7 +234,8 @@ class App:
                 color_index += 1
 
     def show(self, to_show):
-        draw(self.LEFT, self.terminal_rows, str(to_show).ljust(80))
+        available_space = self.terminal_columns - self.LEFT
+        draw(self.LEFT, self.terminal_rows, str(to_show).ljust(available_space)[:available_space])
 
     def unknown_command(self, cmd, args):
         self.show(f"Unknown command '{cmd}'")
