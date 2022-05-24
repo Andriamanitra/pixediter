@@ -82,6 +82,14 @@ def listen():
                 event = "ctrl-e"
             if event == "\x13":
                 event = "ctrl-s"
+            if event == "\x1b[1;5A":
+                event = "ctrl-up"
+            if event == "\x1b[1;5B":
+                event = "ctrl-down"
+            if event == "\x1b[1;5C":
+                event = "ctrl-right"
+            if event == "\x1b[1;5D":
+                event = "ctrl-left"
             yield event
 
 
