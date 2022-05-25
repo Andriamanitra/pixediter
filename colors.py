@@ -1,7 +1,7 @@
-import terminal
-
 import dataclasses
 import random
+
+import terminal
 
 
 @dataclasses.dataclass

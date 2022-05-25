@@ -1,9 +1,10 @@
-from colors import Color
-from events import MouseButton, MouseEventType
-import colors
 import borders
+import colors
 import events
 import terminal
+from colors import Color
+from events import MouseButton
+from events import MouseEventType
 
 
 def draw(x: int, y: int, text: str, color: Color = colors.WHITE):
@@ -143,14 +144,15 @@ class DrawArea(TerminalWidget):
                 color = self.parent.color
                 if ev.button == MouseButton.RIGHT_DRAG:
                     color = self.parent.secondary_color
-                for xy in rect(*self.starting_pos, img_x, img_y):
-                    self.render_pixel(*xy, color)
-                    drawn.add(xy)
+                start_x, start_y = self.starting_pos
+                for x, y in rect(start_x, start_y, img_x, img_y):
+                    self.render_pixel(x, y, color)
+                    drawn.add((x, y))
 
                 # clean up previous
-                for xy in rect(*self.starting_pos, *self._prev_pos):
-                    if xy not in drawn:
-                        self.render_pixel(*xy, self.image[xy])
+                for x, y in rect(*self.starting_pos, *self._prev_pos):
+                    if (x, y) not in drawn:
+                        self.render_pixel(x, y, self.image[x, y])
 
                 self._prev_pos = (img_x, img_y)
 
@@ -268,11 +270,11 @@ class Palette(TerminalWidget):
             # a shape and then releases mouse above this widget
             return False
 
-        if ev.button == MouseButton.LEFT or ev.button == MouseButton.MIDDLE:
+        if ev.button in (MouseButton.LEFT, MouseButton.MIDDLE):
             color = self._color_from_coord.get((ev.x, ev.y), colors.WHITE)
             self.parent.set_primary_color(color)
             return True
-        elif ev.button == MouseButton.RIGHT:
+        if ev.button == MouseButton.RIGHT:
             color = self._color_from_coord.get((ev.x, ev.y), colors.WHITE)
             self.parent.set_secondary_color(color)
             return True
@@ -380,6 +382,7 @@ class Toolbox(TerminalWidget):
 
     def resize_up(self): return
     def resize_down(self): return
+
 
 class ImageData:
     def __init__(self, width=16, height=16, filepath=None):

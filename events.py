@@ -1,9 +1,27 @@
-import sys
-import tty
 import contextlib
-import termios
 import dataclasses
 import enum
+import sys
+import termios
+import tty
+from collections.abc import Generator
+from collections.abc import Iterator
+
+
+NAMED_EVENTS = {
+    "\x1b[A":     "up",
+    "\x1b[B":     "down",
+    "\x1b[C":     "right",
+    "\x1b[D":     "left",
+    "\x7f":       "backspace",
+    "\x11":       "ctrl-q",
+    "\x05":       "ctrl-e",
+    "\x13":       "ctrl-s",
+    "\x1b[1;5A":  "ctrl-up",
+    "\x1b[1;5B":  "ctrl-down",
+    "\x1b[1;5C":  "ctrl-right",
+    "\x1b[1;5D":  "ctrl-left",
+}
 
 
 class MouseButton(enum.Enum):
@@ -30,7 +48,7 @@ class MouseEvent:
     y: int
 
     @classmethod
-    def parse(cls, event_str: str):
+    def parse(cls, event_str: str) -> "MouseEvent":
         # a valid mouse event is something like:
         # \x1b[<0;51;31M
         # the three numbers are:
@@ -38,20 +56,16 @@ class MouseEvent:
         # 2. y coordinate of the character under cursor
         # 3. x coordinate of the character under cursor
         # the last character is the event type
-        try:
-            mbutton, x, y = map(int, event_str[3:-1].split(";"))
-            event_type = MouseEventType(event_str[-1])
-            mbutton = MouseButton(mbutton)
-            return cls(event_type, mbutton, x, y)
-        except Exception:  # this is stupid but works for now
-            return event_str
+        mbutton, x, y = event_str[3:-1].split(";")
+        event_type = MouseEventType(event_str[-1])
+        return cls(event_type, MouseButton(int(mbutton)), int(x), int(y))
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"MouseEvent({self.event_type.name}, {self.button}, x={self.x}, y={self.y})"
 
 
 @contextlib.contextmanager
-def setcbreak(fd):
+def setcbreak(fd) -> Iterator[None]:
     old_settings = termios.tcgetattr(fd)
     try:
         tty.setcbreak(fd)
@@ -61,7 +75,7 @@ def setcbreak(fd):
 
 
 @contextlib.contextmanager
-def mouse_tracking_enabled():
+def mouse_tracking_enabled() -> Iterator[None]:
     ENABLE_MOUSE_TRACKING = "\033[?1000;1002;1006;1015h"
     DISABLE_MOUSE_TRACKING = "\033[?1000;1002;1006;1015l"
     try:
@@ -71,7 +85,7 @@ def mouse_tracking_enabled():
         print(DISABLE_MOUSE_TRACKING, end="", flush=True)
 
 
-def listen():
+def listen() -> Generator[MouseEvent | str, None, None]:
     with setcbreak(sys.stdin.fileno()):
         while True:
             event = sys.stdin.read(1)
@@ -81,38 +95,22 @@ def listen():
                 while not event[-1].isalpha():
                     event += sys.stdin.read(1)
                 if event.startswith("\x1b[<"):
-                    event = MouseEvent.parse(event)
-                elif event == "\x1b[A":
-                    event = "up"
-                elif event == "\x1b[B":
-                    event = "down"
-                elif event == "\x1b[C":
-                    event = "right"
-                elif event == "\x1b[D":
-                    event = "left"
-            # TODO: i'm sure there's a better way to do this
-            if event == "\x7f":
-                event = "backspace"
-            if event == "\x11":
-                event = "ctrl-q"
-            if event == "\x05":
-                event = "ctrl-e"
-            if event == "\x13":
-                event = "ctrl-s"
-            if event == "\x1b[1;5A":
-                event = "ctrl-up"
-            if event == "\x1b[1;5B":
-                event = "ctrl-down"
-            if event == "\x1b[1;5C":
-                event = "ctrl-right"
-            if event == "\x1b[1;5D":
-                event = "ctrl-left"
-            yield event
+                    yield MouseEvent.parse(event)
+                    continue
+            if event in NAMED_EVENTS:
+                yield NAMED_EVENTS[event]
+            else:
+                yield event
+
+
+def main() -> int:
+    print("tracking events, press enter to stop...")
+    for ev in listen():
+        print(repr(ev))
+        if ev == "\n":
+            break
+    return 0
 
 
 if __name__ == "__main__":
-    print("tracking events, press enter to stop...")
-    for event in listen():
-        print(repr(event))
-        if event == "\n":
-            break
+    raise SystemExit(main())

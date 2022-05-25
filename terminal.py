@@ -1,6 +1,6 @@
 import contextlib
-import sys
 import os
+import sys
 
 
 def enable_mouse_tracking():
