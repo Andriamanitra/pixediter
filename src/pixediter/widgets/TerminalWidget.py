@@ -1,16 +1,20 @@
+from typing import Optional
+
 from pixediter import colors
 from pixediter import events
+from pixediter.application import App
+from pixediter.borders import Borders
 from pixediter.utils import draw
 from pixediter.utils import draw_box
 
 
 class TerminalWidget:
-    def __init__(self, *, parent, bbox, borders=None):
+    def __init__(self, *, parent: App, bbox: tuple[int, int, int, int], borders: Optional[Borders] = None):
         self.parent = parent
         self.selected = False
         self.left, self.top, self.right, self.bottom = bbox
         self.borders = borders
-        self.title = None
+        self.title: Optional[str] = None
 
     def contains(self, x: int, y: int) -> bool:
         """
@@ -19,14 +23,14 @@ class TerminalWidget:
         """
         return self.top <= y <= self.bottom and self.left <= x <= self.right
 
-    def move(self, dx: int, dy: int):
+    def move(self, dx: int, dy: int) -> None:
         """Moves the widget dx columns to the left and dy rows down"""
         self.left += dx
         self.right += dx
         self.top += dy
         self.bottom += dy
 
-    def toggle_selected(self):
+    def toggle_selected(self) -> None:
         self.selected = not self.selected
 
     def onclick(self, ev: events.MouseEvent) -> bool:
@@ -37,7 +41,7 @@ class TerminalWidget:
         print(f"Click! ({ev})")
         return False
 
-    def render(self):
+    def render(self) -> None:
         """Draws the widget in the terminal"""
         if self.borders is not None:
             x0, y0 = self.left - 1, self.top - 1
@@ -47,16 +51,16 @@ class TerminalWidget:
         if self.title is not None:
             draw(self.left, self.top - 1, self.title)
 
-    def resize_up(self):
+    def resize_up(self) -> None:
         if self.bottom > self.top:
             self.bottom -= 1
 
-    def resize_down(self):
+    def resize_down(self) -> None:
         self.bottom += 1
 
-    def resize_left(self):
+    def resize_left(self) -> None:
         if self.right > self.left:
             self.right -= 1
 
-    def resize_right(self):
+    def resize_right(self) -> None:
         self.right += 1

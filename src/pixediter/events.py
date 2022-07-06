@@ -1,4 +1,3 @@
-import contextlib
 import dataclasses
 import enum
 import sys
@@ -6,6 +5,7 @@ import termios
 import tty
 from collections.abc import Generator
 from collections.abc import Iterator
+from contextlib import contextmanager
 
 
 NAMED_EVENTS = {
@@ -64,8 +64,8 @@ class MouseEvent:
         return f"MouseEvent({self.event_type.name}, {self.button}, x={self.x}, y={self.y})"
 
 
-@contextlib.contextmanager
-def setcbreak(fd) -> Iterator[None]:
+@contextmanager
+def setcbreak(fd: int) -> Iterator[None]:
     old_settings = termios.tcgetattr(fd)
     try:
         tty.setcbreak(fd)
@@ -74,7 +74,7 @@ def setcbreak(fd) -> Iterator[None]:
         termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
 
 
-@contextlib.contextmanager
+@contextmanager
 def mouse_tracking_enabled() -> Iterator[None]:
     ENABLE_MOUSE_TRACKING = "\033[?1000;1002;1006;1015h"
     DISABLE_MOUSE_TRACKING = "\033[?1000;1002;1006;1015l"

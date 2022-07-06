@@ -1,27 +1,35 @@
+from collections.abc import Callable
+from collections.abc import Generator
+from typing import Any
+from typing import NoReturn
+from typing import Optional
+
 import pixediter
 from pixediter import borders
 from pixediter import colors
 from pixediter import events
 from pixediter import terminal
 from pixediter.colors import Color
+from pixediter.events import MouseEvent
 from pixediter.events import MouseEventType
 from pixediter.utils import draw
-from pixediter.widgets import DrawArea
-from pixediter.widgets import Palette
-from pixediter.widgets import Toolbox
+from pixediter.widgets.DrawArea import DrawArea
+from pixediter.widgets.Palette import Palette
+from pixediter.widgets.Toolbox import Toolbox
 
 TITLE = f"PixEdiTer v{pixediter.__version__}"
+Pos = tuple[int, int]
 
 
 class ImageData:
-    def __init__(self, width=16, height=16, filepath=None):
+    def __init__(self, width: int = 16, height: int = 16, filepath: Optional[str] = None):
         self.width = width
         self.height = height
         self.filepath = filepath
         self.pixels = [[colors.WHITE for w in range(width)] for h in range(height)]
 
     @classmethod
-    def from_file(cls, filepath: str):
+    def from_file(cls, filepath: str) -> "ImageData":
         from PIL import Image
         with Image.open(filepath) as image:
             width, height = image.size
@@ -32,7 +40,7 @@ class ImageData:
                     new[x, y] = Color(r, g, b)
         return new
 
-    def save_file(self, filepath=None):
+    def save_file(self, filepath: Optional[str] = None) -> None:
         if filepath is None:
             if self.filepath is None:
                 raise Exception("Cannot save: file path not given")
@@ -46,7 +54,7 @@ class ImageData:
         image.save(filepath)
         self.filepath = filepath
 
-    def crop(self, x0, y0, x1, y1):
+    def crop(self, x0: int, y0: int, x1: int, y1: int) -> None:
         new_pixels = []
         if x1 < x0:
             x0, x1, = x1, x0
@@ -66,7 +74,7 @@ class ImageData:
         self.width = len(new_pixels[0])
         self.pixels = new_pixels
 
-    def paint_rectangle(self, x0, y0, x1, y1, color):
+    def paint_rectangle(self, x0: int, y0: int, x1: int, y1: int, color: Color) -> None:
         if x0 > x1:
             x0, x1 = x1, x0
         if y0 > y1:
@@ -78,22 +86,22 @@ class ImageData:
             self.pixels[y][x0] = color
             self.pixels[y][x1] = color
 
-    def __iter__(self):
+    def __iter__(self) -> Generator[tuple[Pos, Color], None, None]:
         for row_index, row in enumerate(self.pixels):
             for col_index, pixel in enumerate(row):
                 yield (col_index, row_index), pixel
 
-    def __getitem__(self, xy: tuple[int, int]):
+    def __getitem__(self, xy: Pos) -> Color:
         x, y = xy
         return self.pixels[y][x]
 
-    def __setitem__(self, xy: tuple[int, int], color) -> None:
+    def __setitem__(self, xy: Pos, color: Color) -> None:
         x, y = xy
         self.pixels[y][x] = color
 
 
 class App:
-    def __init__(self, width=16, height=16):
+    def __init__(self, width: int = 16, height: int = 16):
         self.MARGIN_LEFT = 3
 
         DRAW_AREA_LEFT = self.MARGIN_LEFT
@@ -145,7 +153,7 @@ class App:
         for i, widget in enumerate(self.widgets):
             widget.title = str(i)
 
-        self.commands = {
+        self.commands: dict[str, Callable[[str, list[str]], Any]] = {
             ":help": self.show_help,
             ":h": self.show_help,
             ":?": self.show_help,
@@ -160,32 +168,30 @@ class App:
         self._needs_redraw = False
         self.full_redraw()
 
-    def exit(self, *args):
+    def exit(self, *args: Any) -> NoReturn:
         """exits the program without saving"""
         terminal.clear()
         raise SystemExit(0)
 
-    def draw_title(self):
+    def draw_title(self) -> None:
         draw(4, 1, TITLE, colors.GREEN)
 
-    def full_redraw(self):
+    def full_redraw(self) -> None:
         terminal.clear()
         self.terminal_columns, self.terminal_rows = terminal.size()
         self.draw_title()
         for widget in self.widgets:
             widget.render()
 
-    def new_image(self, cmd, args):
+    def new_image(self, cmd: str, args: list[str]) -> None:
         """
         :new <width: int> <height: int> -- replaces canvas with a new image
         """
-        width, height = args
-        width = int(width)
-        height = int(height)
+        width, height = map(int, args)
         self.draw_area.set_image(ImageData(width, height))
         self.full_redraw()
 
-    def crop(self, cmd, args):
+    def crop(self, cmd: str, args: list[str]) -> None:
         """
         :crop <x0: int> <y0: int> <x1: int> <y1: int> -- crops image to area between given coordinates
         """
@@ -202,23 +208,23 @@ class App:
         else:
             self.full_redraw()
 
-    def set_primary_color(self, color):
+    def set_primary_color(self, color: Color) -> None:
         self.color = color
         self.show(f"Primary color: {self.color} – hex: {self.color.hex()}")
 
-    def set_secondary_color(self, color):
+    def set_secondary_color(self, color: Color) -> None:
         self.secondary_color = color
         self.show(f"Secondary color: {self.secondary_color} – hex: {self.secondary_color.hex()}")
 
-    def show(self, to_show):
+    def show(self, to_show: Any) -> None:
         available_space = self.terminal_columns - self.MARGIN_LEFT
         padded_text = str(to_show).ljust(available_space)[:available_space]
         draw(self.MARGIN_LEFT, self.terminal_rows - 1, padded_text)
 
-    def unknown_command(self, cmd, args):
+    def unknown_command(self, cmd: str, args: list[str]) -> None:
         self.show(f"Unknown command '{cmd}'")
 
-    def load_file(self, cmd, args):
+    def load_file(self, cmd: str, args: list[str]) -> None:
         """
         :open <path: str> -- opens an image from <path> (requires Pillow)
         """
@@ -231,7 +237,7 @@ class App:
             self.draw_area.set_image(image)
             self.full_redraw()
 
-    def save_file(self, cmd, args):
+    def save_file(self, cmd: str, args: list[str]) -> None:
         """
         :save [<path: str>] -- saves the image into <path> (requires Pillow)
         """
@@ -246,7 +252,7 @@ class App:
         else:
             self.show(f"Saved image as {self.draw_area.image.filepath}")
 
-    def show_help(self, cmd, args):
+    def show_help(self, cmd: str, args: list[str]) -> None:
         """
         shows keybindings and commands
         """
@@ -285,14 +291,14 @@ class App:
         draw(self.MARGIN_LEFT, row_number + 2, "Press any key to continue...")
         self._needs_redraw = True
 
-    def run(self):
+    def run(self) -> None:
         cmd = ""
         for ev in events.listen():
             if self._needs_redraw:
                 self.full_redraw()
                 self._needs_redraw = False
 
-            if isinstance(ev, events.MouseEvent):
+            if isinstance(ev, MouseEvent):
                 self._handle_click(ev)
                 continue
 
@@ -304,7 +310,7 @@ class App:
                     cmd, *args = cmd.split()
                     self.commands.get(cmd, self.unknown_command)(cmd, args)
                     cmd = ""
-                elif not isinstance(ev, events.MouseEvent) and len(ev) == 1:
+                elif not isinstance(ev, MouseEvent) and len(ev) == 1:
                     cmd += ev
                     self.show(cmd)
                 continue
@@ -315,7 +321,7 @@ class App:
                 cmd = ":"
                 self.show(cmd)
             elif ev == "?":
-                self.commands[":help"](":help", None)
+                self.commands[":help"](":help", [])
             elif ev == "r":
                 self.full_redraw()
             elif ev in set("0123456789"):
@@ -347,11 +353,11 @@ class App:
                             widget.resize_right()
                 self.full_redraw()
             elif ev == "ctrl-s":
-                self.commands[":save"](":save", None)
+                self.commands[":save"](":save", [])
             else:
                 self.show(f"got event: {ev!r}")
 
-    def _handle_click(self, ev):
+    def _handle_click(self, ev: MouseEvent) -> None:
         for widget in reversed(self.widgets):
             if widget.contains(ev.x, ev.y) and widget.onclick(ev):
                 return
