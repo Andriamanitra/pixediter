@@ -11,8 +11,22 @@ Pixel graphics Editor in Terminal
 ## Why?
 I came across [cmdpxl](https://github.com/knosmos/cmdpxl/) and thought it was a rather cool project, but its usefulness is limited by the lack of mouse support. I figured something similar but with a focus on mouse support would be pretty fun to work on and maybe even slightly useful for some very light editing tasks.
 
+## How to use?
 
-## Demo
+### Option 1: Install
+1. Clone this repository: `git clone git@github.com:Andriamanitra/pixediter`
+1. Navigate to the project directory: `cd pixediter`
+1. Create a virtual environment: `python3.10 -m virtualenv venv && . venv/bin/activate`
+1. Install the package (along with optional dependencies): `pip install .`
+1. Run the executable: `pixediter`
+
+### Option 2: Without installation
+1. Clone this repository: `git clone git@github.com:Andriamanitra/pixediter`
+1. Navigate to the `src/` directory: `cd pixediter/src`
+1. Run the module: `python3.10 -m pixediter`
+
+
+## Demo (old)
 (it looks a bit better in a real terminal, the lines between characters are only there because of asciinema)
 
 [![asciicast](https://asciinema.org/a/pEN7eAuXhCcjiqUIP4E5tYDM7.svg)](https://asciinema.org/a/pEN7eAuXhCcjiqUIP4E5tYDM7)
