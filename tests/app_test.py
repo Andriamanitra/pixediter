@@ -7,5 +7,6 @@ def test_application_runs():
         h.press(":h")
         h.press("Enter")
         h.await_text("Press any key to continue")
+        h.press("Enter")
         h.press("q")
         h.await_exit()
