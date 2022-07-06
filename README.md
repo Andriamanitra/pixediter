@@ -26,16 +26,15 @@ I came across [cmdpxl](https://github.com/knosmos/cmdpxl/) and thought it was a 
 1. Run the module: `python3.10 -m pixediter`
 
 
-## Demo (old)
+## Demo
 (it looks a bit better in a real terminal, the lines between characters are only there because of asciinema)
 
-[![asciicast](https://asciinema.org/a/pEN7eAuXhCcjiqUIP4E5tYDM7.svg)](https://asciinema.org/a/pEN7eAuXhCcjiqUIP4E5tYDM7)
+[![asciicast](https://asciinema.org/a/59FENIkgePEf4uwjzfTC8kM0h.svg)](https://asciinema.org/a/59FENIkgePEf4uwjzfTC8kM0h)
 
 
 ## TODO / What next?
-* Structure the project, jump through some setuptools hoops to make it pip installable and runnable from command line
 * Test with different terminal emulators, I have no idea if it works in anything other than mine currently
-* Set up some unit tests and do some linting & code cleanup
+* Write some unit tests
 * Read key bindings, color pallettes and layouts from a configuration file
 * Better color selection tools (add color wheel, make it possible to adjust at least RGB and HSL channels, maybe more)
 * Add more tools:
