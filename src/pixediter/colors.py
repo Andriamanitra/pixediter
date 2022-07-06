@@ -1,7 +1,7 @@
 import dataclasses
 import random
 
-import terminal
+from pixediter import terminal
 
 
 @dataclasses.dataclass
