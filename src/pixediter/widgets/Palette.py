@@ -52,11 +52,11 @@ class Palette(TerminalWidget):
 
         if ev.button in (MouseButton.LEFT, MouseButton.MIDDLE):
             color = self._color_from_coord.get((ev.x, ev.y), colors.WHITE)
-            self.parent.set_primary_color(color)
+            self.parent.set_color("primary", color)
             return True
         if ev.button == MouseButton.RIGHT:
             color = self._color_from_coord.get((ev.x, ev.y), colors.WHITE)
-            self.parent.set_secondary_color(color)
+            self.parent.set_color("secondary", color)
             return True
         return False
 

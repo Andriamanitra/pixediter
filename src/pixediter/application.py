@@ -1,6 +1,8 @@
 from collections.abc import Callable
 from collections.abc import Generator
+from dataclasses import dataclass
 from typing import Any
+from typing import Literal
 from typing import NoReturn
 from typing import Optional
 
@@ -19,6 +21,12 @@ from pixediter.widgets.Toolbox import Toolbox
 
 TITLE = f"PixEdiTer v{pixediter.__version__}"
 Pos = tuple[int, int]
+
+
+@dataclass
+class SelectedColors:
+    primary: Color
+    secondary: Color
 
 
 class ImageData:
@@ -128,8 +136,7 @@ class App:
             borders=borders.sharp,
             colors=Palette.default_colors
         )
-        self.color = colors.BLACK
-        self.secondary_color = colors.WHITE
+        self.color = SelectedColors(colors.BLACK, colors.WHITE)
 
         self.toolbox = Toolbox(
             parent=self,
@@ -208,13 +215,9 @@ class App:
         else:
             self.full_redraw()
 
-    def set_primary_color(self, color: Color) -> None:
-        self.color = color
-        self.show(f"Primary color: {self.color} – hex: {self.color.hex()}")
-
-    def set_secondary_color(self, color: Color) -> None:
-        self.secondary_color = color
-        self.show(f"Secondary color: {self.secondary_color} – hex: {self.secondary_color.hex()}")
+    def set_color(self, which: Literal["primary", "secondary"], color: Color) -> None:
+        setattr(self.color, which, color)
+        self.show(f"{which} color: {color} – hex: {color.hex()}")
 
     def show(self, to_show: Any) -> None:
         available_space = self.terminal_columns - self.MARGIN_LEFT

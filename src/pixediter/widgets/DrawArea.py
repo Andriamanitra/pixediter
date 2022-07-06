@@ -36,15 +36,17 @@ class DrawArea(TerminalWidget):
     def onclick(self, ev: events.MouseEvent) -> bool:
         img_x, img_y = self.terminal_coords_to_img_coords(ev.x, ev.y)
 
+        if ev.button in (MouseButton.RIGHT, MouseButton.RIGHT_DRAG):
+            color = self.parent.color.secondary
+        else:
+            color = self.parent.color.primary
+
         match self.parent.tool, ev.event_type, ev.button:
             case _, MouseEventType.MOUSE_DOWN, MouseButton.MIDDLE | MouseButton.MIDDLE_DRAG:
-                self.parent.set_primary_color(self.image[img_x, img_y])
+                self.parent.set_color("primary", self.image[img_x, img_y])
 
-            case "Pencil", MouseEventType.MOUSE_DOWN, MouseButton.LEFT | MouseButton.LEFT_DRAG:
-                self.paint(img_x, img_y, self.parent.color)
-
-            case "Pencil", MouseEventType.MOUSE_DOWN, MouseButton.RIGHT | MouseButton.RIGHT_DRAG:
-                self.paint(img_x, img_y, self.parent.secondary_color)
+            case "Pencil", MouseEventType.MOUSE_DOWN, MouseButton.LEFT | MouseButton.LEFT_DRAG | MouseButton.RIGHT | MouseButton.RIGHT_DRAG:  # noqa: E501
+                self.paint(img_x, img_y, color)
 
             case "Rectangle", MouseEventType.MOUSE_DOWN, MouseButton.LEFT | MouseButton.RIGHT:
                 self.starting_pos = (img_x, img_y)
@@ -55,11 +57,7 @@ class DrawArea(TerminalWidget):
                     return False
 
                 drawn = set()
-
                 # draw current
-                color = self.parent.color
-                if ev.button == MouseButton.RIGHT_DRAG:
-                    color = self.parent.secondary_color
                 start_x, start_y = self.starting_pos
                 for x, y in rect(start_x, start_y, img_x, img_y):
                     self.render_pixel(x, y, color)
@@ -75,19 +73,13 @@ class DrawArea(TerminalWidget):
             case "Rectangle", MouseEventType.MOUSE_UP, MouseButton.LEFT | MouseButton.RIGHT:
                 if self.starting_pos is None:
                     return False
-                color = self.parent.color
-                if ev.button == MouseButton.RIGHT:
-                    color = self.parent.secondary_color
                 self.image.paint_rectangle(*self.starting_pos, img_x, img_y, color)
                 self.starting_pos = None
                 self.parent.full_redraw()
 
             case "Fill", MouseEventType.MOUSE_DOWN, MouseButton.LEFT | MouseButton.RIGHT:
                 from_color = self.image[img_x, img_y]
-                to_color = self.parent.color
-                if ev.button == MouseButton.RIGHT:
-                    to_color = self.parent.secondary_color
-                if from_color == to_color:
+                if from_color == color:
                     return True
                 width = self.image.width
                 height = self.image.height
@@ -97,7 +89,7 @@ class DrawArea(TerminalWidget):
                     x, y = xy = stack.pop()
                     if self.image[x, y] != from_color:
                         continue
-                    self.paint(x, y, to_color)
+                    self.paint(x, y, color)
                     visited.add(xy)
                     if y > 0 and (x, y - 1) not in visited:
                         stack.append((x, y - 1))
