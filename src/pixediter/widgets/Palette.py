@@ -1,8 +1,10 @@
+from __future__ import annotations
+
 from typing import Optional
+from typing import TYPE_CHECKING
 
 from pixediter import colors
 from pixediter import events
-from pixediter.application import App
 from pixediter.borders import Borders
 from pixediter.colors import Color
 from pixediter.events import MouseButton
@@ -10,6 +12,9 @@ from pixediter.events import MouseEventType
 from pixediter.utils import draw
 
 from .TerminalWidget import TerminalWidget
+
+if TYPE_CHECKING:
+    from pixediter.application import App
 
 
 class Palette(TerminalWidget):

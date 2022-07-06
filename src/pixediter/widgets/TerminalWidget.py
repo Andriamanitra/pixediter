@@ -1,11 +1,16 @@
+from __future__ import annotations
+
 from typing import Optional
+from typing import TYPE_CHECKING
 
 from pixediter import colors
 from pixediter import events
-from pixediter.application import App
 from pixediter.borders import Borders
 from pixediter.utils import draw
 from pixediter.utils import draw_box
+
+if TYPE_CHECKING:
+    from pixediter.application import App
 
 
 class TerminalWidget:

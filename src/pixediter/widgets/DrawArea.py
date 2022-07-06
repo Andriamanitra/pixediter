@@ -1,8 +1,9 @@
+from __future__ import annotations
+
 from typing import Optional
+from typing import TYPE_CHECKING
 
 from pixediter import events
-from pixediter.application import App
-from pixediter.application import ImageData
 from pixediter.borders import Borders
 from pixediter.colors import Color
 from pixediter.events import MouseButton
@@ -11,6 +12,10 @@ from pixediter.utils import draw
 from pixediter.utils import rect
 
 from .TerminalWidget import TerminalWidget
+
+if TYPE_CHECKING:
+    from pixediter.application import App
+    from pixediter.application import ImageData
 
 
 class DrawArea(TerminalWidget):
