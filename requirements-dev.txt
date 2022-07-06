@@ -1,0 +1,4 @@
+git+https://github.com/asottile/hecate@875567f
+pytest
+mypy
+flake8
