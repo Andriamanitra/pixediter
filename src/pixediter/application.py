@@ -1,5 +1,8 @@
+import os
 from collections.abc import Callable
 from collections.abc import Generator
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import Any
 from typing import Literal
@@ -17,9 +20,11 @@ from pixediter.events import MouseEventType
 from pixediter.utils import draw
 from pixediter.widgets.DrawArea import DrawArea
 from pixediter.widgets.Palette import Palette
+from pixediter.widgets.TerminalWidget import TerminalWidget
 from pixediter.widgets.Toolbox import Toolbox
 
 TITLE = f"PixEdiTer v{pixediter.__version__}"
+debugging = "DEBUG" in os.environ
 Pos = tuple[int, int]
 
 
@@ -27,6 +32,10 @@ Pos = tuple[int, int]
 class SelectedColors:
     primary: Color
     secondary: Color
+
+
+class NoFilePathException(Exception):
+    pass
 
 
 class ImageData:
@@ -51,7 +60,7 @@ class ImageData:
     def save_file(self, filepath: Optional[str] = None) -> None:
         if filepath is None:
             if self.filepath is None:
-                raise Exception("Cannot save: file path not given")
+                raise NoFilePathException("Unable to save: file path not given")
             filepath = self.filepath
 
         from PIL import Image
@@ -172,7 +181,7 @@ class App:
             ":crop": self.crop,
         }
 
-        self._needs_redraw = False
+        self._waiting_for_key = False
         self.full_redraw()
 
     def exit(self, *args: Any) -> NoReturn:
@@ -208,16 +217,16 @@ class App:
             x0, y0, x1, y1 = [int(arg) for arg in args]
         else:
             raise ValueError("crop requires exactly 2 or 4 arguments")
-        try:
-            self.draw_area.crop(x0, y0, x1, y1)
-        except Exception as exc:
-            self.show(exc)
-        else:
-            self.full_redraw()
+        self.draw_area.crop(x0, y0, x1, y1)
+        self.full_redraw()
 
     def set_color(self, which: Literal["primary", "secondary"], color: Color) -> None:
         setattr(self.color, which, color)
         self.show(f"{which} color: {color} – hex: {color.hex()}")
+
+    def debug(self, to_show: str) -> None:
+        if debugging:
+            self.show(to_show)
 
     def show(self, to_show: Any) -> None:
         available_space = self.terminal_columns - self.MARGIN_LEFT
@@ -232,13 +241,9 @@ class App:
         :open <path: str> -- opens an image from <path> (requires Pillow)
         """
         filepath, = args
-        try:
-            image = ImageData.from_file(filepath)
-        except Exception as exc:
-            self.show(exc)
-        else:
-            self.draw_area.set_image(image)
-            self.full_redraw()
+        image = ImageData.from_file(filepath)
+        self.draw_area.set_image(image)
+        self.full_redraw()
 
     def save_file(self, cmd: str, args: list[str]) -> None:
         """
@@ -248,12 +253,8 @@ class App:
             filepath = None
         else:
             filepath, = args
-        try:
-            self.draw_area.image.save_file(filepath)
-        except Exception as exc:
-            self.show(exc)
-        else:
-            self.show(f"Saved image as {self.draw_area.image.filepath}")
+        self.draw_area.image.save_file(filepath)
+        self.show(f"Saved image as {self.draw_area.image.filepath}")
 
     def show_help(self, cmd: str, args: list[str]) -> None:
         """
@@ -292,14 +293,30 @@ class App:
             row_number += 2
 
         draw(self.MARGIN_LEFT, row_number + 2, "Press any key to continue...")
-        self._needs_redraw = True
+        self._waiting_for_key = True
+
+    def selected_widgets(self) -> Generator[TerminalWidget, None, None]:
+        for widget in self.widgets:
+            if widget.selected:
+                yield widget
+
+    @contextmanager
+    def handled_exceptions(self, *exception_types: type) -> Iterator[None]:
+        try:
+            yield
+        except Exception as exc:
+            if any(isinstance(exc, exc_type) for exc_type in exception_types):
+                self.show(f"Error: {exc}")
+            else:
+                raise
 
     def run(self) -> None:
         cmd = ""
         for ev in events.listen():
-            if self._needs_redraw:
+            if self._waiting_for_key:
                 self.full_redraw()
-                self._needs_redraw = False
+                self._waiting_for_key = False
+                continue
 
             if isinstance(ev, MouseEvent):
                 self._handle_click(ev)
@@ -311,7 +328,8 @@ class App:
                     self.show(cmd)
                 elif ev == "\n":
                     cmd, *args = cmd.split()
-                    self.commands.get(cmd, self.unknown_command)(cmd, args)
+                    with self.handled_exceptions(Exception):
+                        self.commands.get(cmd, self.unknown_command)(cmd, args)
                     cmd = ""
                 elif not isinstance(ev, MouseEvent) and len(ev) == 1:
                     cmd += ev
@@ -332,33 +350,43 @@ class App:
                 if i < len(self.widgets):
                     self.widgets[i].toggle_selected()
                     self.full_redraw()
-            elif ev in {"up", "down", "left", "right"}:
-                dx, dy = {
-                    "up": (0, -1),
-                    "down": (0, +1),
-                    "left": (-1, 0),
-                    "right": (+1, 0)
-                }[ev]
-                for widget in self.widgets:
-                    if widget.selected:
-                        widget.move(dx, dy)
+            elif ev == "up":
+                for widget in self.selected_widgets():
+                    widget.move(0, -1)
                 self.full_redraw()
-            elif ev in {"ctrl-up", "ctrl-down", "ctrl-left", "ctrl-right"}:
-                for widget in self.widgets:
-                    if widget.selected:
-                        if ev == "ctrl-up":
-                            widget.resize_up()
-                        elif ev == "ctrl-down":
-                            widget.resize_down()
-                        elif ev == "ctrl-left":
-                            widget.resize_left()
-                        elif ev == "ctrl-right":
-                            widget.resize_right()
+            elif ev == "down":
+                for widget in self.selected_widgets():
+                    widget.move(0, 1)
+                self.full_redraw()
+            elif ev == "left":
+                for widget in self.selected_widgets():
+                    widget.move(-1, 0)
+                self.full_redraw()
+            elif ev == "right":
+                for widget in self.selected_widgets():
+                    widget.move(1, 0)
+                self.full_redraw()
+            elif ev == "ctrl-up":
+                for widget in self.selected_widgets():
+                    widget.resize_up()
+                self.full_redraw()
+            elif ev == "ctrl-down":
+                for widget in self.selected_widgets():
+                    widget.resize_down()
+                self.full_redraw()
+            elif ev == "ctrl-left":
+                for widget in self.selected_widgets():
+                    widget.resize_left()
+                self.full_redraw()
+            elif ev == "ctrl-right":
+                for widget in self.selected_widgets():
+                    widget.resize_right()
                 self.full_redraw()
             elif ev == "ctrl-s":
-                self.commands[":save"](":save", [])
+                with self.handled_exceptions(Exception):
+                    self.commands[":save"](":save", [])
             else:
-                self.show(f"got event: {ev!r}")
+                self.debug(f"got event: {ev!r}")
 
     def _handle_click(self, ev: MouseEvent) -> None:
         for widget in reversed(self.widgets):
@@ -368,4 +396,4 @@ class App:
             self.draw_area.starting_pos = None
             self.full_redraw()
             return
-        self.show(f"got event: {ev!r}")
+        self.debug(f"got event: {ev!r}")
