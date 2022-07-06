@@ -1,4 +1,11 @@
+from __future__ import annotations
+
+from typing import Optional
+from typing import TYPE_CHECKING
+
 from pixediter import events
+from pixediter.borders import Borders
+from pixediter.colors import Color
 from pixediter.events import MouseButton
 from pixediter.events import MouseEventType
 from pixediter.utils import draw
@@ -6,16 +13,27 @@ from pixediter.utils import rect
 
 from .TerminalWidget import TerminalWidget
 
+if TYPE_CHECKING:
+    from pixediter.application import App
+    from pixediter.application import ImageData
+
 
 class DrawArea(TerminalWidget):
-    def __init__(self, *, parent, bbox, borders=None, image):
+    def __init__(
+            self,
+            *,
+            parent: App,
+            bbox: tuple[int, int, int, int],
+            borders: Optional[Borders] = None,
+            image: ImageData
+    ):
         super().__init__(parent=parent, bbox=bbox, borders=borders)
         self.image = image
         self.FILLED_PIXEL = "██"
-        self.starting_pos = None
+        self.starting_pos: Optional[tuple[int, int]] = None
         self._prev_pos = (-1, -1)
 
-    def onclick(self, ev: events.MouseEvent):
+    def onclick(self, ev: events.MouseEvent) -> bool:
         img_x, img_y = self.terminal_coords_to_img_coords(ev.x, ev.y)
 
         match self.parent.tool, ev.event_type, ev.button:
@@ -95,48 +113,48 @@ class DrawArea(TerminalWidget):
 
         return True
 
-    def render(self):
+    def render(self) -> None:
         super().render()
         for (x, y), color in self.image:
             self.render_pixel(x, y, color)
 
-    def terminal_coords_to_img_coords(self, x, y):
+    def terminal_coords_to_img_coords(self, x: int, y: int) -> tuple[int, int]:
         img_x = (x - self.left) // 2
         img_y = y - self.top
         return img_x, img_y
 
-    def paint(self, img_x, img_y, color):
+    def paint(self, img_x: int, img_y: int, color: Color) -> None:
         self.image[img_x, img_y] = color
         self.render_pixel(img_x, img_y, color)
 
-    def render_pixel(self, x, y, color):
+    def render_pixel(self, x: int, y: int, color: Color) -> None:
         # pixels are 2 characters wide
         x = self.left + 2 * x
         y = self.top + y
         draw(x, y, self.FILLED_PIXEL, color)
 
-    def set_image(self, image):
+    def set_image(self, image: ImageData) -> None:
         self.image = image
         self._update_pos()
 
-    def crop(self, x0, y0, x1, y1):
+    def crop(self, x0: int, y0: int, x1: int, y1: int) -> None:
         self.image.crop(x0, y0, x1, y1)
         self._update_pos()
 
-    def _update_pos(self):
+    def _update_pos(self) -> None:
         self.right = self.left + 2 * self.image.width - 1
         self.bottom = self.top + self.image.height - 1
 
-    def resize_up(self):
+    def resize_up(self) -> None:
         if self.image.height > 1:
             self.crop(0, 0, self.image.width, self.image.height - 1)
 
-    def resize_down(self):
+    def resize_down(self) -> None:
         self.crop(0, 0, self.image.width, self.image.height + 1)
 
-    def resize_left(self):
+    def resize_left(self) -> None:
         if self.image.width > 1:
             self.crop(0, 0, self.image.width - 1, self.image.height)
 
-    def resize_right(self):
+    def resize_right(self) -> None:
         self.crop(0, 0, self.image.width + 1, self.image.height)

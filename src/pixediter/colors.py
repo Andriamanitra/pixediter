@@ -17,7 +17,7 @@ class Color:
         return (self.r, self.g, self.b)
 
     @classmethod
-    def from_hex(cls, hexcolor: str):
+    def from_hex(cls, hexcolor: str) -> "Color":
         hexcolor = hexcolor.removeprefix("#")
         hexcolor = hexcolor.removeprefix("0x")
         assert len(hexcolor) == 6
@@ -30,13 +30,13 @@ class Color:
         return cls(r, g, b)
 
     @classmethod
-    def random(cls):
+    def random(cls) -> "Color":
         r = random.randint(0, 255)
         g = random.randint(0, 255)
         b = random.randint(0, 255)
         return cls(r, g, b)
 
-    def colorize(self, txt: str):
+    def colorize(self, txt: str) -> str:
         return terminal.colorize(txt, self.r, self.g, self.b)
 
 

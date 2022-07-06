@@ -1,11 +1,20 @@
+from __future__ import annotations
+
+from typing import Optional
+from typing import TYPE_CHECKING
+
 from pixediter import colors
 from pixediter import events
+from pixediter.borders import Borders
 from pixediter.colors import Color
 from pixediter.events import MouseButton
 from pixediter.events import MouseEventType
 from pixediter.utils import draw
 
 from .TerminalWidget import TerminalWidget
+
+if TYPE_CHECKING:
+    from pixediter.application import App
 
 
 class Palette(TerminalWidget):
@@ -21,11 +30,18 @@ class Palette(TerminalWidget):
         colors.MAGENTA,
     ]
 
-    def __init__(self, *, parent, bbox, borders=None, colors):
+    def __init__(
+            self,
+            *,
+            parent: App,
+            bbox: tuple[int, int, int, int],
+            borders: Optional[Borders] = None,
+            colors: list[Color]
+    ):
         super().__init__(parent=parent, bbox=bbox, borders=borders)
-        self._color_from_coord = {}
+        self._color_from_coord: dict[tuple[int, int], Color] = {}
         self.FILLED_PIXEL = "██"
-        self.colors = []
+        self.colors: list[Color] = []
         self.set_colors(colors)
 
     def onclick(self, ev: events.MouseEvent) -> bool:
@@ -44,11 +60,11 @@ class Palette(TerminalWidget):
             return True
         return False
 
-    def move(self, dx: int, dy: int):
+    def move(self, dx: int, dy: int) -> None:
         super().move(dx, dy)
         self.set_colors(self.colors)
 
-    def set_colors(self, colors):
+    def set_colors(self, colors: list[Color]) -> None:
         self._color_from_coord = {}
         self.colors = []
         color_index = 0
@@ -63,7 +79,7 @@ class Palette(TerminalWidget):
                 self._color_from_coord[(x + 1, y)] = new_color
                 color_index += 1
 
-    def render(self):
+    def render(self) -> None:
         super().render()
         colors = iter(self.colors)
         for y in range(self.top, self.bottom + 1):
@@ -74,11 +90,11 @@ class Palette(TerminalWidget):
                     return
                 draw(x, y, self.FILLED_PIXEL, color)
 
-    def resize_up(self):
+    def resize_up(self) -> None:
         if self.bottom > self.top:
             self.bottom -= 1
 
-    def resize_down(self):
+    def resize_down(self) -> None:
         self.bottom += 1
         number_of_visible_colors = self.rows * self.cols
         extra_colors_needed = number_of_visible_colors - len(self.colors)
@@ -86,11 +102,11 @@ class Palette(TerminalWidget):
         if extra_colors:
             self.set_colors(self.colors + extra_colors)
 
-    def resize_left(self):
+    def resize_left(self) -> None:
         if self.right > self.left + 2:
             self.right -= 2
 
-    def resize_right(self):
+    def resize_right(self) -> None:
         self.right += 2
         number_of_visible_colors = self.rows * self.cols
         extra_colors_needed = number_of_visible_colors - len(self.colors)
@@ -99,9 +115,9 @@ class Palette(TerminalWidget):
             self.set_colors(self.colors + extra_colors)
 
     @property
-    def rows(self):
+    def rows(self) -> int:
         return self.bottom - self.top + 1
 
     @property
-    def cols(self):
+    def cols(self) -> int:
         return (self.right - self.left + 1) // 2
