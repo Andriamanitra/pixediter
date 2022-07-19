@@ -28,11 +28,25 @@ class MouseButton(enum.Enum):
     LEFT = 0
     MIDDLE = 1
     RIGHT = 2
+    ALT_LEFT = 8
+    ALT_MIDDLE = 9
+    ALT_RIGHT = 10
+    CTRL_LEFT = 16
+    CTRL_MIDDLE = 17
+    CTRL_RIGHT = 18
     LEFT_DRAG = 32
     MIDDLE_DRAG = 33
     RIGHT_DRAG = 34
+    ALT_LEFT_DRAG = 40
+    ALT_MIDDLE_DRAG = 41
+    ALT_RIGHT_DRAG = 42
+    CTRL_LEFT_DRAG = 48
+    CTRL_MIDDLE_DRAG = 49
+    CTRL_RIGHT_DRAG = 50
     SCROLL_UP = 64
     SCROLL_DOWN = 65
+    ALT_SCROLL_UP = 72
+    ALT_SCROLL_DOWN = 73
 
 
 class MouseEventType(enum.Enum):
