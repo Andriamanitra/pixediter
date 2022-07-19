@@ -10,6 +10,7 @@ from pixediter.colors import Color
 from pixediter.events import MouseButton
 from pixediter.events import MouseEventType
 from pixediter.utils import draw
+from pixediter.utils import FILLED_PIXEL
 
 from .TerminalWidget import TerminalWidget
 
@@ -40,7 +41,6 @@ class Palette(TerminalWidget):
     ):
         super().__init__(parent=parent, bbox=bbox, borders=borders)
         self._color_from_coord: dict[tuple[int, int], Color] = {}
-        self.FILLED_PIXEL = "██"
         self.colors: list[Color] = []
         self.set_colors(colors)
 
@@ -88,7 +88,7 @@ class Palette(TerminalWidget):
                     color = next(colors)
                 except StopIteration:
                     return
-                draw(x, y, self.FILLED_PIXEL, color)
+                draw(x, y, FILLED_PIXEL, color)
 
     def resize_up(self) -> None:
         if self.bottom > self.top:

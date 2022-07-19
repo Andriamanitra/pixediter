@@ -6,6 +6,9 @@ from pixediter import terminal
 from pixediter.colors import Color
 
 
+FILLED_PIXEL = "██"
+
+
 def draw(x: int, y: int, text: str, color: Color = colors.WHITE) -> None:
     terminal.addstr(y, x, color.colorize(text))
 

@@ -9,6 +9,7 @@ from pixediter.colors import Color
 from pixediter.events import MouseButton
 from pixediter.events import MouseEventType
 from pixediter.utils import draw
+from pixediter.utils import FILLED_PIXEL
 from pixediter.utils import rect
 
 from .TerminalWidget import TerminalWidget
@@ -29,7 +30,6 @@ class DrawArea(TerminalWidget):
     ):
         super().__init__(parent=parent, bbox=bbox, borders=borders)
         self.image = image
-        self.FILLED_PIXEL = "██"
         self.starting_pos: Optional[tuple[int, int]] = None
         self._prev_pos = (-1, -1)
 
@@ -123,7 +123,7 @@ class DrawArea(TerminalWidget):
         # pixels are 2 characters wide
         x = self.left + 2 * x
         y = self.top + y
-        draw(x, y, self.FILLED_PIXEL, color)
+        draw(x, y, FILLED_PIXEL, color)
 
     def set_image(self, image: ImageData) -> None:
         self.image = image
