@@ -36,7 +36,6 @@ I came across [cmdpxl](https://github.com/knosmos/cmdpxl/) and thought it was a 
 * Test with different terminal emulators, I have no idea if it works in anything other than mine currently
 * Write some unit tests
 * Read key bindings, color pallettes and layouts from a configuration file
-* Better color selection tools (add color wheel, make it possible to adjust at least RGB and HSL channels, maybe more)
 * Add more tools:
   * Line drawing tool (Bezier curves might be interesting too)
   * Alpha channel / blending
