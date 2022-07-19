@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 from collections.abc import Callable
 from collections.abc import Generator
@@ -18,6 +20,7 @@ from pixediter.colors import Color
 from pixediter.events import MouseEvent
 from pixediter.events import MouseEventType
 from pixediter.utils import draw
+from pixediter.widgets.ColorAdjuster import ColorAdjuster
 from pixediter.widgets.DrawArea import DrawArea
 from pixediter.widgets.Palette import Palette
 from pixediter.widgets.TerminalWidget import TerminalWidget
@@ -46,7 +49,7 @@ class ImageData:
         self.pixels = [[colors.WHITE for w in range(width)] for h in range(height)]
 
     @classmethod
-    def from_file(cls, filepath: str) -> "ImageData":
+    def from_file(cls, filepath: str) -> ImageData:
         from PIL import Image
         with Image.open(filepath) as image:
             width, height = image.size
@@ -135,17 +138,14 @@ class App:
 
         self.terminal_columns, self.terminal_rows = terminal.size()
 
-        PALETTE_LEFT = self.MARGIN_LEFT
-        PALETTE_TOP = DRAW_AREA_BOTTOM + 3
-        PALETTE_RIGHT = self.MARGIN_LEFT + 32 - 1
-        PALETTE_BOTTOM = PALETTE_TOP + 1
+        palette_top = DRAW_AREA_BOTTOM + 3
         self.palette = Palette(
             parent=self,
-            bbox=(PALETTE_LEFT, PALETTE_TOP, PALETTE_RIGHT, PALETTE_BOTTOM),
+            bbox=(DRAW_AREA_LEFT, palette_top, DRAW_AREA_LEFT + 31, palette_top + 1),
             borders=borders.sharp,
             colors=Palette.default_colors
         )
-        self.color = SelectedColors(colors.BLACK, colors.WHITE)
+        self.color = SelectedColors(colors.GRAY, colors.WHITE)
 
         self.toolbox = Toolbox(
             parent=self,
@@ -161,10 +161,19 @@ class App:
         )
         self.tool = "Pencil"
 
+        self.color_adjuster = ColorAdjuster(
+            parent=self,
+            top=self.toolbox.bottom + 3,
+            left=DRAW_AREA_RIGHT + 4,
+            borders=borders.sharp,
+            color=self.color
+        )
+
         self.widgets = [
             self.draw_area,
             self.palette,
-            self.toolbox
+            self.toolbox,
+            self.color_adjuster
         ]
         for i, widget in enumerate(self.widgets):
             widget.title = str(i)
@@ -222,6 +231,7 @@ class App:
 
     def set_color(self, which: Literal["primary", "secondary"], color: Color) -> None:
         setattr(self.color, which, color)
+        self.color_adjuster.render()
         self.show(f"{which} color: {color} – hex: {color.hex()}")
 
     def debug(self, to_show: str) -> None:
