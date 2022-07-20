@@ -8,6 +8,7 @@ from pixediter.borders import Borders
 from pixediter.colors import Color
 from pixediter.events import MouseButton
 from pixediter.events import MouseEventType
+from pixediter.image import ImageData
 from pixediter.utils import draw
 from pixediter.utils import FILLED_PIXEL
 from pixediter.utils import rect
@@ -16,7 +17,6 @@ from .TerminalWidget import TerminalWidget
 
 if TYPE_CHECKING:
     from pixediter.application import App
-    from pixediter.application import ImageData
 
 
 class DrawArea(TerminalWidget):
