@@ -29,5 +29,5 @@ repos:
     rev: v0.961
     hooks:
     -   id: mypy
-        # TODO: https://mypy.readthedocs.io/en/stable/running_mypy.html#cannot-find-implementation-or-library-stub
-        args: [--python-version=3.10, --ignore-missing-imports]
+        args: [--strict, --ignore-missing-imports, --python-version=3.10]
+        exclude: tests

@@ -4,7 +4,7 @@ from pixediter import terminal
 from pixediter.application import App
 
 
-def size(wxh: str):
+def size(wxh: str) -> tuple[int, int]:
     """Parses string "WIDTHxHEIGHT" into a tuple (WIDTH, HEIGHT)"""
     if "x" not in wxh:
         raise argparse.ArgumentTypeError("You need to specify both WIDTH and HEIGHT separated by 'x'")
