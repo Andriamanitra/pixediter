@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from collections.abc import Generator
 
 from pixediter import colors
@@ -10,6 +11,10 @@ Pos = tuple[int, int]
 
 
 class NoFilePathException(Exception):
+    pass
+
+
+class TooBigImageException(Exception):
     pass
 
 
@@ -24,11 +29,15 @@ class ImageData:
     def from_file(cls, filepath: str) -> ImageData:
         from PIL import Image
         with Image.open(filepath) as image:
-            width, height = image.size
+            rgb_image = image.convert("RGB")
+            width, height = rgb_image.size
+            terminal_width, terminal_height = os.get_terminal_size()
+            if 2 * width > terminal_width or height > terminal_height:
+                raise TooBigImageException("Images larger than the current terminal size are not yet supported")
             new = cls(width, height, filepath)
             for x in range(width):
                 for y in range(height):
-                    r, g, b = image.getpixel((x, y))
+                    r, g, b = rgb_image.getpixel((x, y))
                     new[x, y] = Color(r, g, b)
         return new
 
