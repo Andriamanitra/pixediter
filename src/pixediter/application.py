@@ -101,8 +101,8 @@ class App:
             ":q": self.exit,
             ":quit": self.exit,
             ":new": self.new_image,
-            ":open": self.load_file,
-            ":save": self.save_file,
+            ":open": self.load_image_cmd,
+            ":save": self.save_image_cmd,
             ":crop": self.crop,
         }
 
@@ -162,16 +162,22 @@ class App:
     def unknown_command(self, cmd: str, args: list[str]) -> None:
         self.show(f"Unknown command '{cmd}'")
 
-    def load_file(self, cmd: str, args: list[str]) -> None:
-        """
-        :open <path: str> -- opens an image from <path> (requires Pillow)
-        """
-        filepath, = args
-        image = ImageData.from_file(filepath)
+    def set_image_file_path(self, file_path: str) -> None:
+        self.draw_area.image.filepath = file_path
+
+    def load_image(self, file_path: str) -> None:
+        image = ImageData.from_file(file_path)
         self.draw_area.set_image(image)
         self.full_redraw()
 
-    def save_file(self, cmd: str, args: list[str]) -> None:
+    def load_image_cmd(self, cmd: str, args: list[str]) -> None:
+        """
+        :open <path: str> -- opens an image from <path> (requires Pillow)
+        """
+        file_path, = args
+        self.load_image(file_path)
+
+    def save_image_cmd(self, cmd: str, args: list[str]) -> None:
         """
         :save [<path: str>] -- saves the image into <path> (requires Pillow)
         """
