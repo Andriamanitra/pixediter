@@ -24,7 +24,7 @@ class Toolbox(TerminalWidget):
             selector: ToolSelector
     ):
         if width is None:
-            width = max(len(tool) for tool in selector)
+            width = max(len(tool.name) for tool in selector)
         right = left + width - 1
         bottom = top + len(selector) - 1
         bbox = (left, top, right, bottom)
@@ -45,7 +45,7 @@ class Toolbox(TerminalWidget):
         y = self.top
         for tool in self.selector:
             color = colors.WHITE if tool == self.selector.current else colors.GRAY
-            toolstr = tool.ljust(self.width)[:self.width]
+            toolstr = tool.name.ljust(self.width)[:self.width]
             draw(self.left, y, toolstr, color=color)
             y += 1
 

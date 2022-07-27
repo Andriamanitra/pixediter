@@ -13,6 +13,7 @@ from pixediter import borders
 from pixediter import colors
 from pixediter import events
 from pixediter import terminal
+from pixediter import tools
 from pixediter.ColorSelector import ColorSelector
 from pixediter.events import MouseEvent
 from pixediter.events import MouseEventType
@@ -34,7 +35,7 @@ class App:
         self.MARGIN_LEFT = 3
 
         self.color = ColorSelector(primary=colors.GRAY, secondary=colors.WHITE)
-        self.tool = ToolSelector("Pencil", "Rectangle", "Fill")
+        self.tool = ToolSelector(tools.PencilTool(), tools.RectangleTool(), tools.FillTool())
 
         DRAW_AREA_LEFT = self.MARGIN_LEFT
         DRAW_AREA_TOP = 3
@@ -48,8 +49,7 @@ class App:
             borders=borders.sharp,
             image=ImageData(width, height),
             color=self.color,
-            tools=self.tool,
-            full_app_redraw=self.full_redraw
+            tools=self.tool
         )
 
         palette_top = DRAW_AREA_BOTTOM + 3
@@ -307,10 +307,16 @@ class App:
 
     def _handle_click(self, ev: MouseEvent) -> None:
         for widget in reversed(self.widgets):
-            if widget.contains(ev.x, ev.y) and widget.onclick(ev):
-                return
-        if ev.event_type == MouseEventType.MOUSE_UP and self.draw_area.starting_pos is not None:
-            self.draw_area.starting_pos = None
-            self.full_redraw()
-            return
+            if widget.contains(ev.x, ev.y):
+                handled = widget.onclick(ev)
+                if handled:
+                    break
+        if ev.event_type == MouseEventType.MOUSE_UP:
+            # this needs to be handled here rather than in tools themselves because MOUSE_UP
+            # event may happen outside DrawArea widget
+            self.tool.current.reset_state()
+            # some of the drawing may have happened on top of widgets
+            # that had been moved to on top of DrawArea
+            for widget in self.widgets:
+                widget.render()
         self.debug(f"got event: {ev!r}")

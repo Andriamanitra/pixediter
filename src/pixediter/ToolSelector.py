@@ -1,7 +1,6 @@
 from collections.abc import Iterator
 
-# TODO: refactor to use a dedicated tool class that contains all of the drawing logic too
-Tool = str
+from pixediter.tools import Tool
 
 
 class ToolSelector:
@@ -16,7 +15,7 @@ class ToolSelector:
         Returns selected tool.
         """
         for idx, tool in enumerate(self.tools):
-            if tool == tool_name:
+            if tool.name == tool_name:
                 self._current_idx = idx
                 break
         return self.current

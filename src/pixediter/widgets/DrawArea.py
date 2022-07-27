@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections.abc import Callable
 from typing import Optional
 
 from pixediter import events
@@ -10,10 +9,10 @@ from pixediter.ColorSelector import ColorSelector
 from pixediter.events import MouseButton
 from pixediter.events import MouseEventType
 from pixediter.image import ImageData
+from pixediter.tools import DrawEvent
 from pixediter.ToolSelector import ToolSelector
 from pixediter.utils import draw
 from pixediter.utils import FILLED_PIXEL
-from pixediter.utils import rect
 
 from .TerminalWidget import TerminalWidget
 
@@ -26,91 +25,32 @@ class DrawArea(TerminalWidget):
             borders: Optional[Borders] = None,
             image: ImageData,
             color: ColorSelector,
-            tools: ToolSelector,
-            full_app_redraw: Callable[[], None]
+            tools: ToolSelector
     ):
         super().__init__(bbox=bbox, borders=borders)
         self.image = image
-        self.starting_pos: Optional[tuple[int, int]] = None
-        self._prev_pos = (-1, -1)
         self.color = color
         self.tools = tools
-        self.full_app_redraw = full_app_redraw
 
     def onclick(self, ev: events.MouseEvent) -> bool:
         img_x, img_y = self.terminal_coords_to_img_coords(ev.x, ev.y)
+        draw_event = DrawEvent((img_x, img_y), ev.event_type, ev.button, self.color)
 
-        if ev.button in (MouseButton.RIGHT, MouseButton.RIGHT_DRAG):
-            color = self.color.secondary
-        else:
-            color = self.color.primary
+        if ev.event_type == MouseEventType.MOUSE_DOWN:
+            handled = self.tools.current.mouse_down(self.image, draw_event, self.render_pixel)
+        elif ev.event_type == MouseEventType.MOUSE_DRAG:
+            handled = self.tools.current.mouse_drag(self.image, draw_event, self.render_pixel)
+        elif ev.event_type == MouseEventType.MOUSE_UP:
+            handled = self.tools.current.mouse_up(self.image, draw_event, self.render_pixel)
 
-        match self.tools.current, ev.event_type, ev.button:
-            case _, MouseEventType.MOUSE_DOWN | MouseEventType.MOUSE_DRAG, MouseButton.MIDDLE:
-                self.color.set_color("primary", self.image[img_x, img_y])
+        if handled:
+            return True
 
-            case "Pencil", MouseEventType.MOUSE_DOWN | MouseEventType.MOUSE_DRAG, MouseButton.LEFT | MouseButton.RIGHT:
-                self.paint(img_x, img_y, color)
+        if ev.event_type in (MouseEventType.MOUSE_DOWN, MouseEventType.MOUSE_DRAG) and ev.button == MouseButton.MIDDLE:
+            self.color.set_color("primary", self.image[img_x, img_y])
+            return True
 
-            case "Rectangle", MouseEventType.MOUSE_DOWN, MouseButton.LEFT | MouseButton.RIGHT:
-                self.starting_pos = (img_x, img_y)
-                self._prev_pos = (img_x, img_y)
-
-            case "Rectangle", MouseEventType.MOUSE_DRAG, MouseButton.LEFT | MouseButton.RIGHT:
-                if self.starting_pos is None:
-                    return False
-
-                drawn = set()
-                # draw current
-                start_x, start_y = self.starting_pos
-                for x, y in rect(start_x, start_y, img_x, img_y):
-                    self.render_pixel(x, y, color)
-                    drawn.add((x, y))
-
-                # clean up previous
-                for x, y in rect(*self.starting_pos, *self._prev_pos):
-                    if (x, y) not in drawn:
-                        self.render_pixel(x, y, self.image[x, y])
-
-                self._prev_pos = (img_x, img_y)
-
-            case "Rectangle", MouseEventType.MOUSE_UP, MouseButton.LEFT | MouseButton.RIGHT:
-                if self.starting_pos is None:
-                    return False
-                self.image.paint_rectangle(*self.starting_pos, img_x, img_y, color)
-                self.starting_pos = None
-                self.full_app_redraw()
-
-            case "Fill", MouseEventType.MOUSE_DOWN, MouseButton.LEFT | MouseButton.RIGHT:
-                from_color = self.image[img_x, img_y]
-                if from_color == color:
-                    return True
-                width = self.image.width
-                height = self.image.height
-                stack = [(img_x, img_y)]
-                visited = set()
-                while stack:
-                    x, y = xy = stack.pop()
-                    if self.image[x, y] != from_color:
-                        continue
-                    self.paint(x, y, color)
-                    visited.add(xy)
-                    if y > 0 and (x, y - 1) not in visited:
-                        stack.append((x, y - 1))
-                    if x > 0 and (x - 1, y) not in visited:
-                        stack.append((x - 1, y))
-                    if y < height - 1 and (x, y + 1) not in visited:
-                        stack.append((x, y + 1))
-                    if x < width - 1 and (x + 1, y) not in visited:
-                        stack.append((x + 1, y))
-
-            case _, MouseEventType.MOUSE_UP, MouseButton.LEFT | MouseButton.RIGHT:
-                self.full_app_redraw()
-
-            case _:
-                return False
-
-        return True
+        return False
 
     def render(self) -> None:
         super().render()
