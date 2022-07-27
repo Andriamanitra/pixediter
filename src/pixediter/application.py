@@ -5,9 +5,7 @@ from collections.abc import Callable
 from collections.abc import Generator
 from collections.abc import Iterator
 from contextlib import contextmanager
-from dataclasses import dataclass
 from typing import Any
-from typing import Literal
 from typing import NoReturn
 
 import pixediter
@@ -15,10 +13,11 @@ from pixediter import borders
 from pixediter import colors
 from pixediter import events
 from pixediter import terminal
-from pixediter.colors import Color
+from pixediter.ColorSelector import ColorSelector
 from pixediter.events import MouseEvent
 from pixediter.events import MouseEventType
 from pixediter.image import ImageData
+from pixediter.ToolSelector import ToolSelector
 from pixediter.utils import draw
 from pixediter.widgets.ColorAdjuster import ColorAdjuster
 from pixediter.widgets.DrawArea import DrawArea
@@ -30,55 +29,46 @@ TITLE = f"PixEdiTer v{pixediter.__version__}"
 debugging = "DEBUG" in os.environ
 
 
-@dataclass
-class SelectedColors:
-    primary: Color
-    secondary: Color
-
-
 class App:
     def __init__(self, width: int = 16, height: int = 16):
         self.MARGIN_LEFT = 3
+
+        self.color = ColorSelector(primary=colors.GRAY, secondary=colors.WHITE)
+        self.tool = ToolSelector("Pencil", "Rectangle", "Fill")
 
         DRAW_AREA_LEFT = self.MARGIN_LEFT
         DRAW_AREA_TOP = 3
         DRAW_AREA_RIGHT = DRAW_AREA_LEFT + 2 * width - 1
         DRAW_AREA_BOTTOM = DRAW_AREA_TOP + height - 1
 
+        self.terminal_columns, self.terminal_rows = terminal.size()
+
         self.draw_area = DrawArea(
-            parent=self,
             bbox=(DRAW_AREA_LEFT, DRAW_AREA_TOP, DRAW_AREA_RIGHT, DRAW_AREA_BOTTOM),
             borders=borders.sharp,
-            image=ImageData(width, height)
+            image=ImageData(width, height),
+            color=self.color,
+            tools=self.tool,
+            full_app_redraw=self.full_redraw
         )
-
-        self.terminal_columns, self.terminal_rows = terminal.size()
 
         palette_top = DRAW_AREA_BOTTOM + 3
         self.palette = Palette(
-            parent=self,
             bbox=(DRAW_AREA_LEFT, palette_top, DRAW_AREA_LEFT + 31, palette_top + 1),
             borders=borders.sharp,
-            colors=Palette.default_colors
+            colors=Palette.default_colors,
+            selector=self.color
         )
-        self.color = SelectedColors(colors.GRAY, colors.WHITE)
 
         self.toolbox = Toolbox(
-            parent=self,
             top=DRAW_AREA_TOP,
             left=DRAW_AREA_RIGHT + 4,
             width=10,
             borders=borders.sharp,
-            tools=[
-                "Pencil",
-                "Rectangle",
-                "Fill",
-            ]
+            selector=self.tool
         )
-        self.tool = "Pencil"
 
         self.color_adjuster = ColorAdjuster(
-            parent=self,
             top=self.toolbox.bottom + 3,
             left=DRAW_AREA_RIGHT + 4,
             borders=borders.sharp,
@@ -144,11 +134,6 @@ class App:
             raise ValueError("crop requires exactly 2 or 4 arguments")
         self.draw_area.crop(x0, y0, x1, y1)
         self.full_redraw()
-
-    def set_color(self, which: Literal["primary", "secondary"], color: Color) -> None:
-        setattr(self.color, which, color)
-        self.color_adjuster.render()
-        self.show(f"{which} color: {color} – hex: {color.hex()}")
 
     def debug(self, to_show: str) -> None:
         if debugging:

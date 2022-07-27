@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import dataclasses
 import enum
 import sys
@@ -34,6 +36,13 @@ class MouseButton(enum.Enum):
     CTRL_LEFT = 16
     CTRL_MIDDLE = 17
     CTRL_RIGHT = 18
+    SCROLL_UP = 64
+    SCROLL_DOWN = 65
+    ALT_SCROLL_UP = 72
+    ALT_SCROLL_DOWN = 73
+
+    # When initializing through MouseEvent, these should never happen
+    # because it stores MOUSE_DRAG separately in MouseEventType
     LEFT_DRAG = 32
     MIDDLE_DRAG = 33
     RIGHT_DRAG = 34
@@ -43,15 +52,13 @@ class MouseButton(enum.Enum):
     CTRL_LEFT_DRAG = 48
     CTRL_MIDDLE_DRAG = 49
     CTRL_RIGHT_DRAG = 50
-    SCROLL_UP = 64
-    SCROLL_DOWN = 65
-    ALT_SCROLL_UP = 72
-    ALT_SCROLL_DOWN = 73
 
 
 class MouseEventType(enum.Enum):
     MOUSE_DOWN = "M"
     MOUSE_UP = "m"
+    # dragging does not come directly from terminal escape sequence
+    MOUSE_DRAG = "DRAG"
 
 
 @dataclasses.dataclass
@@ -62,7 +69,7 @@ class MouseEvent:
     y: int
 
     @classmethod
-    def parse(cls, event_str: str) -> "MouseEvent":
+    def parse(cls, event_str: str) -> MouseEvent:
         # a valid mouse event is something like:
         # \x1b[<0;51;31M
         # the three numbers are:
@@ -71,8 +78,17 @@ class MouseEvent:
         # 3. x coordinate of the character under cursor
         # the last character is the event type
         mbutton, x, y = event_str[3:-1].split(";")
-        event_type = MouseEventType(event_str[-1])
-        return cls(event_type, MouseButton(int(mbutton)), int(x), int(y))
+        button_num = int(mbutton)
+        if button_num & 32 == 32:
+            event_type = MouseEventType.MOUSE_DRAG
+            button_num -= 32
+        else:
+            event_type = MouseEventType(event_str[-1])
+        return cls(event_type, MouseButton(button_num), int(x), int(y))
+
+    @property
+    def is_drag(self) -> bool:
+        return self.button.value & 32 == 32
 
     def __repr__(self) -> str:
         return f"MouseEvent({self.event_type.name}, {self.button}, x={self.x}, y={self.y})"

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from typing import Optional
-from typing import TYPE_CHECKING
 
 from pixediter import colors
 from pixediter import events
@@ -9,13 +8,9 @@ from pixediter.borders import Borders
 from pixediter.utils import draw
 from pixediter.utils import draw_box
 
-if TYPE_CHECKING:
-    from pixediter.application import App
-
 
 class TerminalWidget:
-    def __init__(self, *, parent: App, bbox: tuple[int, int, int, int], borders: Optional[Borders] = None):
-        self.parent = parent
+    def __init__(self, *, bbox: tuple[int, int, int, int], borders: Optional[Borders] = None):
         self.selected = False
         self.left, self.top, self.right, self.bottom = bbox
         self.borders = borders

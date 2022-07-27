@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 from typing import Optional
-from typing import TYPE_CHECKING
 
 from pixediter import events
 from pixediter.borders import Borders
 from pixediter.colors import Color
+from pixediter.ColorSelector import ColorSelector
 from pixediter.events import MouseButton
 from pixediter.events import MouseEventType
 from pixediter.utils import draw
@@ -13,24 +13,18 @@ from pixediter.utils import FILLED_PIXEL
 
 from .TerminalWidget import TerminalWidget
 
-if TYPE_CHECKING:
-    from pixediter.application import App
-    from pixediter.application import SelectedColors
-
 
 class ColorAdjuster(TerminalWidget):
     def __init__(
             self,
             *,
-            parent: App,
             top: int,
             left: int,
             borders: Optional[Borders] = None,
-            color: SelectedColors
+            color: ColorSelector
     ):
         self.width = 17
         super().__init__(
-            parent=parent,
             bbox=(left, top, left + self.width - 1, top + 9),
             borders=borders
         )
@@ -38,10 +32,17 @@ class ColorAdjuster(TerminalWidget):
         self.delta = 0.1
         self._color_from_coord: dict[tuple[int, int], Color] = {}
 
+        def on_color_change(which: str, old_color: Color, new_color: Color) -> None:
+            self.render()
+
+        self.color.add_change_listener(on_color_change)
+
     def onclick(self, ev: events.MouseEvent) -> bool:
-        if ev.event_type == MouseEventType.MOUSE_UP:
+        if ev.event_type != MouseEventType.MOUSE_DOWN:
             # this allows the default handler to run when the user starts drawing
-            # a shape and then releases mouse above this widget
+            # a shape and then releases mouse above this widget, and when user
+            # continues drawing over this widget when it's located on top of draw
+            # area
             return False
 
         if ev.button == MouseButton.SCROLL_UP:
@@ -59,9 +60,9 @@ class ColorAdjuster(TerminalWidget):
         if not color:
             return True
         if ev.button in (MouseButton.LEFT, MouseButton.MIDDLE):
-            self.parent.set_color("primary", color)
+            self.color.set_color("primary", color)
         elif ev.button == MouseButton.RIGHT:
-            self.parent.set_color("secondary", color)
+            self.color.set_color("secondary", color)
         return True
 
     def render(self) -> None:
