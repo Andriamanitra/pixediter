@@ -35,7 +35,7 @@ class App:
         self.MARGIN_LEFT = 3
 
         self.color = ColorSelector(primary=colors.GRAY, secondary=colors.WHITE)
-        self.tool = ToolSelector(tools.PencilTool(), tools.RectangleTool(), tools.FillTool())
+        self.tool = ToolSelector(tools.PencilTool(), tools.RectangleTool(), tools.LineTool(), tools.FillTool())
 
         DRAW_AREA_LEFT = self.MARGIN_LEFT
         DRAW_AREA_TOP = 3
