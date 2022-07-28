@@ -30,6 +30,9 @@ class MouseButton(enum.Enum):
     LEFT = 0
     MIDDLE = 1
     RIGHT = 2
+    SHIFT_LEFT = 4
+    SHIFT_MIDDLE = 5
+    SHIFT_RIGHT = 6
     ALT_LEFT = 8
     ALT_MIDDLE = 9
     ALT_RIGHT = 10
