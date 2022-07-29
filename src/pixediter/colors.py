@@ -67,6 +67,34 @@ class Color:
         b = random.randint(0, 255)
         return cls(r, g, b)
 
+    @classmethod
+    def lerp_rgb(cls, color_a: Color, color_b: Color, value: float) -> Color:
+        """Linear interpolation between two colors in RGB color space"""
+        if value < 0.0 or value > 1.0:
+            raise ValueError("Interpolation value has to be between 0 and 1")
+        r = round(color_a.r + (color_b.r - color_a.r) * value)
+        g = round(color_a.g + (color_b.g - color_a.g) * value)
+        b = round(color_a.b + (color_b.b - color_a.b) * value)
+        return cls(r, g, b)
+
+    @classmethod
+    def lerp_hsl(cls, color_a: Color, color_b: Color, value: float) -> Color:
+        """Linear interpolation between two colors in HSL color space"""
+        if value < 0.0 or value > 1.0:
+            raise ValueError("Interpolation value has to be between 0 and 1")
+        h_a, s_a, l_a = color_a.hsl()
+        h_b, s_b, l_b = color_b.hsl()
+        # since hue is circular (0.0 is the same as 1.0) it needs special handling
+        hue_difference = h_b - h_a
+        if hue_difference > 0.5:
+            hue_difference = -(1.0 - hue_difference)
+        elif hue_difference < -0.5:
+            hue_difference = -(-1.0 - hue_difference)
+        hue = (h_a + hue_difference * value) % 1.0
+        saturation = s_a + (s_b - s_a) * value
+        lightness = l_a + (l_b - l_a) * value
+        return cls.from_hsl(hue, saturation, lightness)
+
     def colorize(self, txt: str) -> str:
         return terminal.colorize(txt, self.r, self.g, self.b)
 
