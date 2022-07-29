@@ -79,7 +79,7 @@ class RectangleTool:
 
     def __init__(self) -> None:
         self.starting_pos = (-1, -1)
-        self.previous_pos = (-1, -1)
+        self.last_drawn: dict[Pos, Color] = {}
 
     def is_started(self) -> bool:
         return self.starting_pos != (-1, -1)
@@ -89,9 +89,8 @@ class RectangleTool:
             # pressing another mouse button while previewing (dragging) cancels the draw
             self.reset_state()
             return True
-        if ev.button in (MouseButton.LEFT, MouseButton.RIGHT):
+        if ev.button.left() or ev.button.right():
             self.starting_pos = ev.pos
-            self.previous_pos = ev.pos
             draw(*ev.pos, ev.active_color())
             return True
 
@@ -103,37 +102,45 @@ class RectangleTool:
         color = ev.active_color()
         start_x, start_y = self.starting_pos
         curr_x, curr_y = ev.pos
-        prev_x, prev_y = self.previous_pos
 
-        drawn = set()
+        # if ctrl is held down, force into a square
+        if ev.button.ctrl():
+            rect_size = max(abs(curr_x - start_x), abs(curr_y - start_y))
+            if curr_x >= start_x:
+                curr_x = start_x + rect_size
+            else:
+                curr_x = start_x - rect_size
+            if curr_y >= start_y:
+                curr_y = start_y + rect_size
+            else:
+                curr_y = start_y - rect_size
+
+        drawn = {}
         # draw current
         for x, y in rect(start_x, start_y, curr_x, curr_y):
-            draw(x, y, color)
-            drawn.add((x, y))
+            if (0 <= x < img.width) and (0 <= y < img.height):
+                draw(x, y, color)
+                drawn[(x, y)] = color
 
         # clean up previous
-        for x, y in rect(start_x, start_y, prev_x, prev_y):
+        for x, y in self.last_drawn:
             if (x, y) not in drawn:
                 draw(x, y, img[x, y])
+        self.last_drawn = drawn
 
-        self.previous_pos = ev.pos
         return True
 
     def mouse_up(self, img: ImageData, ev: DrawEvent, draw: DrawFn) -> bool:
         if not self.is_started():
             return False
-
         # draw permanently
-        color = ev.active_color()
-        start_x, start_y = self.starting_pos
-        curr_x, curr_y = ev.pos
-        for x, y in rect(start_x, start_y, curr_x, curr_y):
+        for (x, y), color in self.last_drawn.items():
             img[x, y] = color
         return True
 
     def reset_state(self) -> None:
-        self.previous_pos = (-1, -1)
         self.starting_pos = (-1, -1)
+        self.last_drawn = {}
 
 
 class LineTool:
