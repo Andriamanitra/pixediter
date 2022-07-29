@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from collections.abc import Callable
 from collections.abc import Iterator
 from dataclasses import dataclass
@@ -14,11 +15,12 @@ from pixediter.utils import rect
 
 
 DrawFn = Callable[[int, int, Color], None]
+Pos = tuple[int, int]
 
 
 @dataclass
 class DrawEvent:
-    pos: tuple[int, int]
+    pos: Pos
     type: MouseEventType
     button: MouseButton
     color: ColorSelector
@@ -144,7 +146,7 @@ class LineTool:
     def is_started(self) -> bool:
         return self.starting_pos != (-1, -1)
 
-    def line(self, from_pos: tuple[int, int], to_pos: tuple[int, int]) -> Iterator[tuple[int, int]]:
+    def line(self, from_pos: Pos, to_pos: Pos) -> Iterator[Pos]:
         x0, y0 = from_pos
         x1, y1 = to_pos
 
@@ -260,3 +262,132 @@ class FillTool:
 
     def reset_state(self) -> None:
         pass
+
+
+def vector_projection(target: Pos, vec: Pos) -> tuple[float, float]:
+    """Returns component of vec that is parallel to target"""
+    target_x, target_y = target
+    vec_x, vec_y = vec
+    dot = target_x * vec_x + target_y * vec_y
+    abs_target_squared = target_x ** 2 + target_y ** 2
+    multiplier = dot / abs_target_squared
+    return (multiplier * target_x, multiplier * target_y)
+
+
+class Gradient:
+    name = "Gradient"
+
+    def __init__(self) -> None:
+        self.start = (-1, -1)
+        self.color_a = Color(0, 0, 0)
+        self.color_b = Color(255, 255, 255)
+        self.last_drawn: dict[Pos, Color] = {}
+
+    @staticmethod
+    def radial_gradient(
+            img: ImageData,
+            center: Pos,
+            end: Pos,
+            color_a: Color,
+            color_b: Color,
+            lerp_fn: Callable[[Color, Color, float], Color] = Color.lerp_rgb
+    ) -> Iterator[tuple[Pos, Color]]:
+        if center == end:
+            yield center, color_a
+            return
+        cx, cy = center
+        ex, ey = end
+        radius = math.hypot(ex - cx, ey - cy)
+        x0 = max(0, math.floor(cx - radius))
+        x1 = min(img.width, math.ceil(cx + radius + 1))
+        y0 = max(0, math.floor(cy - radius))
+        y1 = min(img.height, math.ceil(cy + radius + 1))
+        for x in range(x0, x1):
+            for y in range(y0, y1):
+                dist_from_center = math.hypot(x - cx, y - cy)
+                if dist_from_center <= radius:
+                    color = lerp_fn(color_a, color_b, dist_from_center / radius)
+                    yield (x, y), color
+
+    @staticmethod
+    def linear_gradient(
+            img: ImageData,
+            start: Pos,
+            end: Pos,
+            color_a: Color,
+            color_b: Color,
+            lerp_fn: Callable[[Color, Color, float], Color] = Color.lerp_rgb
+    ) -> Iterator[tuple[Pos, Color]]:
+        if start == end:
+            yield start, color_a
+            return
+        ax, ay = start
+        bx, by = end
+        a_to_b = (ab_x, ab_y) = (bx - ax, by - ay)
+        for (x, y), _color in img:
+            a_to_c = (x - ax, y - ay)
+            proj_x, proj_y = vector_projection(a_to_b, a_to_c)
+            # opposite direction => before the starting point => ignore
+            if (proj_x * ab_x < 0) or (proj_y * ab_y < 0):
+                continue
+            # longer than a_to_b => after the end point => ignore
+            elif abs(proj_x) > abs(ab_x) or abs(proj_y) > abs(ab_y):
+                continue
+            else:
+                # between a and b => interpolate a color
+                val = (proj_x ** 2 + proj_y ** 2) ** 0.5 / (ab_x ** 2 + ab_y ** 2) ** 0.5
+                color = lerp_fn(color_a, color_b, val)
+                yield (x, y), color
+
+    def is_started(self) -> bool:
+        return self.start != (-1, -1)
+
+    def mouse_down(self, img: ImageData, ev: DrawEvent, draw: DrawFn) -> bool:
+        if self.is_started():
+            # pressing another mouse button while previewing (dragging) cancels the draw
+            self.reset_state()
+            return True
+
+        if ev.button.left():
+            self.color_a = ev.color.primary
+            self.color_b = ev.color.secondary
+        elif ev.button.right():
+            self.color_a = ev.color.secondary
+            self.color_b = ev.color.primary
+        else:
+            return False
+
+        x, y = ev.pos
+        draw(x, y, self.color_a)
+        self.last_drawn = {ev.pos: self.color_a}
+        self.start = ev.pos
+        return True
+
+    def mouse_up(self, img: ImageData, ev: DrawEvent, draw: DrawFn) -> bool:
+        if not self.is_started():
+            return False
+        for (x, y), color in self.last_drawn.items():
+            img[x, y] = color
+        self.reset_state()
+        return True
+
+    def mouse_drag(self, img: ImageData, ev: DrawEvent, draw: DrawFn) -> bool:
+        if not self.is_started():
+            return False
+        if self.start == ev.pos:
+            return True
+        drawn = {}
+        lerp = Color.lerp_hsl if ev.button.alt() else Color.lerp_rgb
+        gradient = self.radial_gradient if ev.button.ctrl() else self.linear_gradient
+        for (x, y), color in gradient(img, self.start, ev.pos, self.color_a, self.color_b, lerp):
+            drawn[x, y] = color
+            draw(x, y, color)
+        for x, y in self.last_drawn:
+            if (x, y) not in drawn:
+                draw(x, y, img[x, y])
+        self.last_drawn = drawn
+        return True
+
+    def reset_state(self) -> None:
+        self.start = (-1, -1)
+        self.last_drawn = {}
