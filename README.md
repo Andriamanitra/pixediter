@@ -29,15 +29,17 @@ I came across [cmdpxl](https://github.com/knosmos/cmdpxl/) and thought it was a 
 ## Demo
 (it looks a bit better in a real terminal, the lines between characters are only there because of asciinema)
 
-[![asciicast](https://asciinema.org/a/59FENIkgePEf4uwjzfTC8kM0h.svg)](https://asciinema.org/a/59FENIkgePEf4uwjzfTC8kM0h)
+[![asciicast](https://asciinema.org/a/3pdHgc24eIIM0qkkhCUeWbRdu.svg)](https://asciinema.org/a/3pdHgc24eIIM0qkkhCUeWbRdu)
 
 
 ## TODO / What next?
 * Test with different terminal emulators, I have no idea if it works in anything other than mine currently
 * Write some unit tests
 * Read key bindings, color pallettes and layouts from a configuration file
+* Undo functionality would be nice
 * Add more tools:
-  * Line drawing tool (Bezier curves might be interesting too)
+  * Bezier curves
+  * Circles / Ellipses
   * Alpha channel / blending
   * Filters (grayscale, tweak color balance, etc.)
 * Eventually it would be nice to have built-in support for [XDG cursor themes](https://wiki.archlinux.org/title/Cursor_themes). The file formats are a bit weird and they are not the most straight-forward thing to work with manually, so PixEdiTer could possibly help with that. Of course it would be rather limited in what kind of resolution it is feasible to work with.
