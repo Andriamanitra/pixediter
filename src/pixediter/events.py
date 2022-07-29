@@ -36,9 +36,21 @@ class MouseButton(enum.Enum):
     ALT_LEFT = 8
     ALT_MIDDLE = 9
     ALT_RIGHT = 10
+    ALT_SHIFT_LEFT = 12
+    ALT_SHIFT_MIDDLE = 13
+    ALT_SHIFT_RIGHT = 14
     CTRL_LEFT = 16
     CTRL_MIDDLE = 17
     CTRL_RIGHT = 18
+    CTRL_SHIFT_LEFT = 20
+    CTRL_SHIFT_MIDDLE = 21
+    CTRL_SHIFT_RIGHT = 22
+    CTRL_ALT_LEFT = 24
+    CTRL_ALT_MIDDLE = 25
+    CTRL_ALT_RIGHT = 26
+    CTRL_ALT_SHIFT_LEFT = 28
+    CTRL_ALT_SHIFT_MIDDLE = 29
+    CTRL_ALT_SHIFT_RIGHT = 30
     SCROLL_UP = 64
     SCROLL_DOWN = 65
     ALT_SCROLL_UP = 72
@@ -55,6 +67,24 @@ class MouseButton(enum.Enum):
     CTRL_LEFT_DRAG = 48
     CTRL_MIDDLE_DRAG = 49
     CTRL_RIGHT_DRAG = 50
+
+    def left(self) -> bool:
+        return self.value < 64 and self.value & 3 == 0
+
+    def middle(self) -> bool:
+        return self.value < 64 and self.value & 3 == 1
+
+    def right(self) -> bool:
+        return self.value < 64 and self.value & 3 == 2
+
+    def shift(self) -> bool:
+        return self.value & 4 == 4
+
+    def alt(self) -> bool:
+        return self.value & 8 == 8
+
+    def ctrl(self) -> bool:
+        return self.value & 16 == 16
 
 
 class MouseEventType(enum.Enum):
