@@ -91,7 +91,9 @@ class RectangleTool:
             return True
         if ev.button.left() or ev.button.right():
             self.starting_pos = ev.pos
-            draw(*ev.pos, ev.active_color())
+            color = ev.active_color()
+            draw(*ev.pos, color)
+            self.last_drawn[ev.pos] = color
             return True
 
         return False
@@ -193,8 +195,9 @@ class LineTool:
             return True
         if ev.button in (MouseButton.LEFT, MouseButton.RIGHT):
             self.starting_pos = ev.pos
-            self.previous_pos = ev.pos
-            draw(*ev.pos, ev.active_color())
+            color = ev.active_color()
+            draw(*ev.pos, color)
+            self.last_drawn[ev.pos] = color
             return True
 
         return False
