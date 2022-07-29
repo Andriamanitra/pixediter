@@ -148,7 +148,7 @@ class LineTool:
 
     def __init__(self) -> None:
         self.starting_pos = (-1, -1)
-        self.previous_pos = (-1, -1)
+        self.last_drawn: dict[Pos, Color] = {}
 
     def is_started(self) -> bool:
         return self.starting_pos != (-1, -1)
@@ -204,18 +204,18 @@ class LineTool:
             return False
         color = ev.active_color()
 
-        drawn = set()
+        drawn = {}
         # draw current
         for x, y in self.line(self.starting_pos, ev.pos):
             draw(x, y, color)
-            drawn.add((x, y))
+            drawn[(x, y)] = color
 
         # clean up previous
-        for x, y in self.line(self.starting_pos, self.previous_pos):
+        for x, y in self.last_drawn:
             if (x, y) not in drawn:
                 draw(x, y, img[x, y])
 
-        self.previous_pos = ev.pos
+        self.last_drawn = drawn
         return True
 
     def mouse_up(self, img: ImageData, ev: DrawEvent, draw: DrawFn) -> bool:
@@ -223,14 +223,13 @@ class LineTool:
             return False
 
         # draw permanently
-        color = ev.active_color()
-        for x, y in self.line(self.starting_pos, ev.pos):
+        for (x, y), color in self.last_drawn.items():
             img[x, y] = color
         return True
 
     def reset_state(self) -> None:
-        self.previous_pos = (-1, -1)
         self.starting_pos = (-1, -1)
+        self.last_drawn = {}
 
 
 class FillTool:
