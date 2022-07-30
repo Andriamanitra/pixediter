@@ -37,9 +37,8 @@ class Palette(TerminalWidget):
             selector: ColorSelector
     ):
         super().__init__(bbox=bbox, borders=borders)
-        self._color_from_coord: dict[tuple[int, int], Color] = {}
-        self.colors: list[Color] = []
-        self.set_colors(colors)
+        self.colors: list[Color] = colors
+        self.fill_empty_slots_with_random_colors()
         self.selector = selector
 
     def onclick(self, ev: events.MouseEvent) -> bool:
@@ -50,34 +49,35 @@ class Palette(TerminalWidget):
             # area
             return False
 
+        color_idx = self.color_index_from_coords(ev.x, ev.y)
+
         if ev.button in (MouseButton.LEFT, MouseButton.MIDDLE):
-            color = self._color_from_coord.get((ev.x, ev.y), colors.WHITE)
-            self.selector.set_color("primary", color)
-            return True
-        if ev.button == MouseButton.RIGHT:
-            color = self._color_from_coord.get((ev.x, ev.y), colors.WHITE)
-            self.selector.set_color("secondary", color)
-            return True
-        return False
+            self.selector.set_color("primary", self.colors[color_idx])
+        elif ev.button == MouseButton.RIGHT:
+            self.selector.set_color("secondary", self.colors[color_idx])
+        elif ev.button == MouseButton.CTRL_LEFT:
+            self.set_color(color_idx, self.selector.primary)
+        elif ev.button == MouseButton.CTRL_RIGHT:
+            self.set_color(color_idx, self.selector.secondary)
+        else:
+            return False
+        return True
 
     def move(self, dx: int, dy: int) -> None:
         super().move(dx, dy)
-        self.set_colors(self.colors)
 
-    def set_colors(self, colors: list[Color]) -> None:
-        self._color_from_coord = {}
-        self.colors = []
-        color_index = 0
-        for y in range(self.top, self.bottom + 1):
-            for x in range(self.left, self.right, 2):
-                if color_index >= len(colors):
-                    new_color = Color.random()
-                else:
-                    new_color = colors[color_index]
-                self.colors.append(new_color)
-                self._color_from_coord[(x, y)] = new_color
-                self._color_from_coord[(x + 1, y)] = new_color
-                color_index += 1
+    def set_color(self, idx: int, color: Color) -> None:
+        self.colors[idx] = color
+
+    def color_index_from_coords(self, x: int, y: int) -> int:
+        row = y - self.top
+        col = (x - self.left) // 2
+        return row * self.cols + col
+
+    def fill_empty_slots_with_random_colors(self) -> None:
+        slots = self.cols * self.rows
+        while len(self.colors) < slots:
+            self.colors.append(Color.random())
 
     def render(self) -> None:
         super().render()
@@ -96,11 +96,7 @@ class Palette(TerminalWidget):
 
     def resize_down(self) -> None:
         self.bottom += 1
-        number_of_visible_colors = self.rows * self.cols
-        extra_colors_needed = number_of_visible_colors - len(self.colors)
-        extra_colors = [Color.random() for i in range(extra_colors_needed)]
-        if extra_colors:
-            self.set_colors(self.colors + extra_colors)
+        self.fill_empty_slots_with_random_colors()
 
     def resize_left(self) -> None:
         if self.right > self.left + 2:
@@ -108,11 +104,7 @@ class Palette(TerminalWidget):
 
     def resize_right(self) -> None:
         self.right += 2
-        number_of_visible_colors = self.rows * self.cols
-        extra_colors_needed = number_of_visible_colors - len(self.colors)
-        extra_colors = [Color.random() for i in range(extra_colors_needed)]
-        if extra_colors:
-            self.set_colors(self.colors + extra_colors)
+        self.fill_empty_slots_with_random_colors()
 
     @property
     def rows(self) -> int:
