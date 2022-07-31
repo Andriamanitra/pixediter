@@ -46,8 +46,9 @@ class Color:
     def from_hex(cls, hexcolor: str) -> Color:
         hexcolor = hexcolor.removeprefix("#")
         hexcolor = hexcolor.removeprefix("0x")
-        assert len(hexcolor) == 6
         hexval = int(hexcolor, 16)
+        if hexval < 0 or hexval > 0xFFFFFF:
+            raise ValueError(f"Invalid hex color value '{hexcolor}'")
         b = hexval & 255
         hexval >>= 8
         g = hexval & 255
