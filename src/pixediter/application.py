@@ -99,6 +99,7 @@ class App:
             ":new": self.new_image,
             ":open": self.load_image_cmd,
             ":save": self.save_image_cmd,
+            ":setcolor": self.setcolor_cmd,
             ":crop": self.crop,
         }
 
@@ -178,6 +179,25 @@ class App:
             filepath, = args
         self.draw_area.image.save_file(filepath)
         self.show(f"Saved image as {self.draw_area.image.filepath}")
+
+    def setcolor_cmd(self, cmd: str, args: list[str]) -> None:
+        """
+        :setcolor [primary | secondary] <color: str> -- set current color to hexadecimal <color>
+        """
+        if len(args) == 1:
+            which = "primary"
+            hexcolor = args[0]
+        elif len(args) == 2:
+            which, hexcolor = args
+        else:
+            raise ValueError("'setcolor' command expects 1–2 arguments")
+        color = colors.Color.from_hex(hexcolor)
+        if "primary".startswith(which):
+            self.color.set_color("primary", color)
+        elif "secondary".startswith(which):
+            self.color.set_color("secondary", color)
+        else:
+            raise ValueError("You can only set 'primary' or 'secondary' color")
 
     def show_help(self, cmd: str, args: list[str]) -> None:
         """
