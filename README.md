@@ -14,14 +14,14 @@ I came across [cmdpxl](https://github.com/knosmos/cmdpxl/) and thought it was a 
 ## How to use?
 
 ### Option 1: Install
-1. Clone this repository: `git clone git@github.com:Andriamanitra/pixediter`
+1. Clone this repository: `git clone https://github.com/Andriamanitra/pixediter`
 1. Navigate to the project directory: `cd pixediter`
 1. Create a virtual environment: `python3.10 -m virtualenv venv && . venv/bin/activate`
 1. Install the package (along with optional dependencies): `pip install .`
 1. Run the executable: `pixediter`
 
 ### Option 2: Without installation
-1. Clone this repository: `git clone git@github.com:Andriamanitra/pixediter`
+1. Clone this repository: `git clone https://github.com/Andriamanitra/pixediter`
 1. Navigate to the `src/` directory: `cd pixediter/src`
 1. Run the module: `python3.10 -m pixediter`
 
